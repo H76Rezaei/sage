@@ -3,12 +3,13 @@
 import threading
 import webbrowser
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS  # Import CORS
 import nltk  
 from nltk.sentiment import SentimentIntensityAnalyzer  
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration  
 from transformers import AutoModelForCausalLM, AutoTokenizer
 app = Flask(__name__)  
-
+CORS(app)  # Enable CORS for all routes
 tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
 model = BlenderbotForConditionalGeneration.from_pretrained("facebook/blenderbot-400M-distill")
 
