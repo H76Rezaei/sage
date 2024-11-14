@@ -1,0 +1,12 @@
+For running the frontend:
+- Make sure you have all of the required dependencies
+- Go to the chatbot-frontend directory
+- Run the command prompt
+- Write the following command "npm start"
+
+
+
+For running the Flask server (Backend):
+- Make sure you have all python dependencies
+- Create virtual environment if needed
+- launch the python main.py file (to activate flask server)
