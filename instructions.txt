@@ -1,3 +1,12 @@
+Python virtual environment setup:
+- Command promt: python -m venv sage/venv
+                 source sage/venv/bin/activate
+				 pip install -r sage/requirements.txt
+
+
+
+
+
 For running the frontend:
 - Make sure you have all of the required dependencies
 - Go to the chatbot-frontend directory
