@@ -1,8 +1,8 @@
 @echo off
-pushd ..\..\sage\venv\Scripts
+pushd ..\..\chatbot-backend\venv\Scripts
 call activate  # Activate virtual environment
 popd
-pushd ..\..\sage
+pushd ..\..\chatbot-backend
 call python main.py  # Start backend
 popd
 pause
