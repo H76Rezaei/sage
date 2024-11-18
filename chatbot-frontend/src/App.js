@@ -39,7 +39,13 @@ function App() {
         //  backend response for now
         try {
             const data = await sendToBackend(text);
-            const botMessage = { type: 'bot', text: data.response, emotion: data.emotion };
+            console.log('Full response data:', data);
+            console.log('Emotion Analysis:', data.emotion); 
+            
+            //removing emotion from bot response
+            //const botMessage = { type: 'bot', text: data.response, emotion: data.emotion };
+
+            const botMessage = { type: 'bot', text: data.response };
             setMessages((prev) => [...prev, botMessage]);
             saveToHistory(botMessage);
         } finally {

@@ -1,28 +1,16 @@
 //Displays the chat history on the screen using "messages" state
 import React from 'react';
 
-function ChatBox({ messages, loading }) {
+const ChatBox = ({ messages, loading }) => {
     return (
         <div className="chat-box">
-            {messages.map((msg, index) => (
-                <div key={index} className={`message ${msg.type}`}>
-                    {msg.type === 'bot' ? (
-                        <>
-                            <div>{msg.text}</div>
-                            <div className="emotion-label">Emotion: {msg.emotion}</div>
-                        </>
-                    ) : (
-                        <div>{msg.text}</div>
-                    )}
+            {messages.map((message, index) => (
+                <div key={index} className={`message ${message.type}`}>
+                    <div className="message-text">{message.text}</div>
                 </div>
             ))}
-            {loading && (
-                <div className="loading-indicator">
-                    <span>Loading...</span>
-                </div>
-            )}
+            {loading && <div className="loading">Bot is typing...</div>}
         </div>
     );
-}
-
+};
 export default ChatBox;

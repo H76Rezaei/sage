@@ -3,6 +3,7 @@ from flask_cors import CORS  # Import CORS
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+from models.go_emotions import EmotionDetector
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -10,8 +11,9 @@ CORS(app)  # Enable CORS for all routes
 # Initialize model and tokenizer
 tokenizer = BlenderbotTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
 model = BlenderbotForConditionalGeneration.from_pretrained("facebook/blenderbot-400M-distill")
+goEmotions_detector = EmotionDetector()
 
-nltk.download('vader_lexicon')
+#nltk.download('vader_lexicon')
 
 # Function to generate a response using Blenderbot
 def generate_response(user_input):
@@ -25,22 +27,30 @@ def generate_response(user_input):
         return "I'm having trouble responding right now."
 
 # Function to detect emotion
-def detect_emotion(text):
-    sia = SentimentIntensityAnalyzer()
-    sentiment_scores = sia.polarity_scores(text)
-    if sentiment_scores['compound'] >= 0.05:
-        return "Positive"
-    elif sentiment_scores['compound'] <= -0.05:
-        return "Negative"
-    else:
-        return "Neutral"
+# not needed for now, because we're using go_emotions.py
+
+#def detect_emotion(text):
+#    sia = SentimentIntensityAnalyzer()
+#    sentiment_scores = sia.polarity_scores(text)
+#    if sentiment_scores['compound'] >= 0.05:
+#        return "Positive"
+#    elif sentiment_scores['compound'] <= -0.05:
+#        return "Negative"
+#    else:
+#        return "Neutral"
 
 # Route to handle conversation
 @app.route('/conversation', methods=['POST'])
 def conversation():
     user_input = request.json.get('message')
     response = generate_response(user_input)
-    emotion = detect_emotion(user_input)
+
+    #replace detect_emotion with goEmotion_detector
+    #emotion = detect_emotion(user_input)
+
+    emotion = goEmotions_detector.get_emotional_response(user_input, response)
+    #return jsonify({'response': response})
+
     return jsonify({'response': response, 'emotion': emotion})
 
 if __name__ == '__main__':
