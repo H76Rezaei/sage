@@ -1,7 +1,7 @@
 Python virtual environment setup:
-- Command promt: python -m venv sage/venv
-                 source sage/venv/bin/activate
-				 pip install -r sage/requirements.txt
+- Command promt: python -m venv sage/chatbot-backend/venv
+                 source sage/chatbot-backend/venv/bin/activate
+				 pip install -r sage/chatbot-backend/requirements.txt
 
 
 
@@ -19,3 +19,6 @@ For running the Flask server (Backend):
 - Make sure you have all python dependencies
 - Create virtual environment if needed
 - launch the python main.py file (to activate flask server)
+- if you're on winodws you can use the batch script by
+  + navigating to the chatbot-frontend inside the command prompt
+  + typing npm run start-backend
