@@ -9,7 +9,7 @@ const ChatBox = ({ messages, loading }) => {
                     <div className="message-text">{message.text}</div>
                 </div>
             ))}
-            {loading && <div className="loading">Bot is typing...</div>}
+            {loading && <div className="loading">Sage is typing...</div>}
         </div>
     );
 };
