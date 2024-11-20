@@ -5,14 +5,16 @@ Python virtual environment setup:
 
 
 
+React + Node setup:
+- install node package manager (npm) and Node.js
+- go to chatbot-frontend in the project folder and run "npm install" in the command prompt
+- run "npm install react react-dom"
 
 
 For running the frontend:
 - Make sure you have all of the required dependencies
 - Go to the chatbot-frontend directory
-- Run the command prompt
-- Write the following command "npm start"
-
+- run the following command "npm start" inside the commmand prompt
 
 
 For running the Flask server (Backend):
