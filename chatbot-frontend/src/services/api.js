@@ -1,6 +1,6 @@
 export async function sendToBackend(message, onChunk) {
     try {
-      const response = await fetch('http://127.0.0.1:5000/conversation', {
+      const response = await fetch('http://127.0.0.1:8000/conversation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -22,11 +22,13 @@ export async function sendToBackend(message, onChunk) {
         
         // Convert the chunk to text and parse the JSON
         const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
+        const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
         
         for (const line of lines) {
           try {
-            const data = JSON.parse(line);
+            // Remove 'data: ' prefix
+            const jsonStr = line.slice(6).trim();
+            const data = JSON.parse(jsonStr);
             accumulatedText = data.response;
             
             // Call the callback with the current state
