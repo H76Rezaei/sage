@@ -28,13 +28,13 @@ def stream_generation(user_input):
         )
         
         # Initialize generation parameters
-        max_new_tokens = 150
+        max_new_tokens = 100
         accumulated_text = ""
         
         # Set up generation config
         generation_config = {
-            "max_new_tokens": 1,
-            "temperature": 0.7,
+            "max_new_tokens": 10,
+            "temperature": 0.5,
             "top_p": 0.9,
             "do_sample": True,
             "pad_token_id": tokenizer.pad_token_id,
