@@ -68,17 +68,10 @@ def stream_generation(user_input):
                 # Update accumulated text
                 accumulated_text += new_text
                 
-                # Get emotion analysis
-                #emotion = goEmotions_detector.get_emotional_response(
-                #    user_input, 
-                #    accumulated_text
-                #)
-                
                 # Create response object
                 response_obj = {
                     "response": accumulated_text.strip(),
                     "is_final": False,
-                    #"emotion": emotion
                 }
                 
                 yield json.dumps(response_obj) + '\n'
@@ -95,7 +88,6 @@ def stream_generation(user_input):
         final_response = {
             "response": accumulated_text.strip(),
             "is_final": True,
-            #"emotion": emotion
         }
         yield json.dumps(final_response) + '\n'
 
