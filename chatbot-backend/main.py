@@ -16,6 +16,11 @@ model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 tokenizer.pad_token = tokenizer.eos_token
 model.config.pad_token_id = tokenizer.pad_token_id
 
+# Move model to GPU if available
+if torch.cuda.is_available():
+    model = model.cuda()
+model.eval()  # Set to evaluation mode
+
 goEmotions_detector = EmotionDetector()
 
 def stream_generation(user_input):
@@ -26,6 +31,10 @@ def stream_generation(user_input):
             return_tensors="pt",
             add_special_tokens=True
         )
+
+        #continuation of GPU setup
+        if torch.cuda.is_available():
+            inputs = {k: v.cuda() for k, v in inputs.items()}
         
         # Initialize generation parameters
         max_new_tokens = 100
