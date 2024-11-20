@@ -21,9 +21,9 @@ def generate_response(user_input):
         inputs = tokenizer(user_input, return_tensors="pt")
         response_ids = model.generate(
             **inputs,
-            max_new_tokens=500,
+            max_new_tokens=150,
             temperature=0.5,
-            top_p=0.7,
+            top_p=0.9,
             do_sample=True
         )
         complete_response = tokenizer.decode(response_ids[0], skip_special_tokens=True)
