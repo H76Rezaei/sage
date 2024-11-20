@@ -34,7 +34,6 @@ def generate_response(user_input):
             # Create response object
             response_obj = {
                 'response': accumulated_response.strip(),
-                'emotion': emotion,
                 'is_final': i == len(words) - 1
             }  
 
@@ -44,7 +43,6 @@ def generate_response(user_input):
     except Exception as e:
         error_response = {
             'response': "I'm having trouble responding right now.",
-            'emotion': None,
             'is_final': True,
             'error': str(e)
         }
