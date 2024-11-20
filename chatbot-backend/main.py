@@ -1,11 +1,16 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from transformers import LlamaForCausalLM, PreTrainedTokenizerFast
+from transformers import LlamaForCausalLM, PreTrainedTokenizerFast, AutoModelForCausalLM
 from models.go_emotions import EmotionDetector
 import json
 import torch
 import asyncio
+
+
+print(torch.cuda.is_available())  # Should return True
+print(torch.cuda.get_device_name(0))  # Should show your GPU name
+
 
 app = FastAPI()
 
@@ -18,9 +23,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Initialize Llama tokenizer and model
+model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct").to("cuda")
 tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
-model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 
 # Set up the pad token
 tokenizer.pad_token = tokenizer.eos_token
@@ -35,7 +41,7 @@ async def stream_generation(user_input):
             user_input,
             return_tensors="pt",
             add_special_tokens=True
-        )
+        ).to("cuda")  # Move inputs to GPU
         
         # Initialize generation parameters
         max_new_tokens = 100
@@ -43,14 +49,14 @@ async def stream_generation(user_input):
         
         # Set up generation config
         generation_config = {
-            "max_new_tokens": 10,
-            "temperature": 0.5,
+            "max_new_tokens": 10,  # Increase token generation
+            "temperature": 0.7,
             "top_p": 0.9,
             "do_sample": True,
-            "pad_token_id": tokenizer.pad_token_id,
             "return_dict_in_generate": True,
-            "output_scores": False,
+            "output_scores": False
         }
+
 
         # Keep track of the current context
         current_input_ids = inputs.input_ids
@@ -63,12 +69,13 @@ async def stream_generation(user_input):
                     attention_mask=current_attention_mask,
                     **generation_config
                 )
+
                 
                 # Get the generated sequence
                 generated_sequence = outputs.sequences[0]
                 
                 # Decode only the new tokens
-                new_tokens = generated_sequence[current_input_ids.shape[1]:]
+                new_tokens = generated_sequence[current_input_ids.shape[1]:].cpu()
                 new_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
                 
                 # Skip if no new text was generated
