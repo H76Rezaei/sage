@@ -6,72 +6,72 @@ import sendToBackend from './services/api';
 import './App.css';
 
 function App() {
-  /*
-  messages is a useState
-  loading is a useState
-  */
-    const [messages, setMessages] = useState([]); //Store the chat History in an array of "message" objects
-    const [loading, setLoading] = useState(false); //Loading state
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  /*
-  useEffect is a "Hook"
+  useEffect(() => {
+    const storedHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    setMessages(storedHistory);
+  }, []);
 
-  - Fetches the stored chat history from localStorage
-  - Adds the fetched history to the state "messages"
-  */
-    useEffect(() => {
-        const storedHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-        setMessages(storedHistory);
-    }, []);
+  const handleSendMessage = async (text) => {
+    const userMessage = { type: 'user', text };
+    setMessages((prev) => [...prev, userMessage]);
+    saveToHistory(userMessage);
 
-    /*
-    handleSendMessage is an Event Handler
-    */ 
-    const handleSendMessage = async (text) => {
-        const userMessage = { type: 'user', text }; //create new user message object
-        setMessages((prev) => [...prev, userMessage]); //append user message to the "messages" state 
-        saveToHistory(userMessage); //save the user message to localStorage 
+    setLoading(true);
+    
+    // Create an initial bot message
+    const botMessage = { type: 'bot', text: ''};
+    setMessages((prev) => [...prev, botMessage]);
 
-        //Loading indicator
-        setLoading(true); // Show loading indicator
+    try {
+      await sendToBackend(text, (streamData) => {
+        // Update the bot's message with the streamed text
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = {
+            type: 'bot',
+            text: streamData.text,
+          };
+          return newMessages;
+        });
 
-
-        //  backend response for now
-        try {
-            const data = await sendToBackend(text);
-            const botMessage = { type: 'bot', text: data.response, emotion: data.emotion };
-            setMessages((prev) => [...prev, botMessage]);
-            saveToHistory(botMessage);
-        } finally {
-            setLoading(false);
+        // If this is the final chunk, save to history
+        if (streamData.isFinal) {
+          const finalBotMessage = {
+            type: 'bot',
+            text: streamData.text,
+          };
+          saveToHistory(finalBotMessage);
         }
-    };
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    /*
-    Clears the chat history
-    */
-    const clearChatHistory = () => {
-        localStorage.removeItem('chatHistory'); //remove chat history from localStorage
-        setMessages([]); //clear the "messages" state
-    };
+  const clearChatHistory = () => {
+    localStorage.removeItem('chatHistory');
+    setMessages([]);
+  };
 
-    //Save chat history
-    const saveToHistory = (message) => {
-        const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
-        history.push(message);
-        localStorage.setItem('chatHistory', JSON.stringify(history));
-    };
+  const saveToHistory = (message) => {
+    const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    history.push(message);
+    localStorage.setItem('chatHistory', JSON.stringify(history));
+  };
 
-    return (
-        <div className="chat-container">
-            <header className="chat-header">
-                <h1>Chatbot</h1>
-                <button onClick={clearChatHistory}>Clear History</button>
-            </header>
-            <ChatBox messages={messages} loading={loading} />
-            <ChatInput onSendMessage={handleSendMessage} />
-        </div>
-    );
+  return (
+    <div className="chat-container">
+      <header className="chat-header">
+        <h1>Chatbot</h1>
+        <button onClick={clearChatHistory}>Clear History</button>
+      </header>
+      <ChatBox messages={messages} loading={loading} />
+      <ChatInput onSendMessage={handleSendMessage} />
+    </div>
+  );
 }
 
 export default App;
