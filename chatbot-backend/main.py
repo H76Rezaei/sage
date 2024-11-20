@@ -1,12 +1,22 @@
-from flask import Flask, request, Response, stream_with_context
-from flask_cors import CORS
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from transformers import LlamaForCausalLM, PreTrainedTokenizerFast
 from models.go_emotions import EmotionDetector
 import json
 import torch
+import asyncio
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize Llama tokenizer and model
 tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
@@ -18,7 +28,7 @@ model.config.pad_token_id = tokenizer.pad_token_id
 
 goEmotions_detector = EmotionDetector()
 
-def stream_generation(user_input):
+async def stream_generation(user_input):
     try:
         # Tokenize input
         inputs = tokenizer(
@@ -74,7 +84,10 @@ def stream_generation(user_input):
                     "is_final": False,
                 }
                 
-                yield json.dumps(response_obj) + '\n'
+                yield f"data: {json.dumps(response_obj)}\n\n"
+                
+                # Small delay to simulate streaming
+                await asyncio.sleep(0.1)
                 
                 # Update context for next iteration
                 current_input_ids = generated_sequence.unsqueeze(0)
@@ -89,7 +102,7 @@ def stream_generation(user_input):
             "response": accumulated_text.strip(),
             "is_final": True,
         }
-        yield json.dumps(final_response) + '\n'
+        yield f"data: {json.dumps(final_response)}\n\n"
 
     except Exception as e:
         error_response = {
@@ -97,15 +110,18 @@ def stream_generation(user_input):
             "is_final": True,
             "error": str(e)
         }
-        yield json.dumps(error_response) + '\n'
+        yield f"data: {json.dumps(error_response)}\n\n"
 
-@app.route('/conversation', methods=['POST'])
-def conversation():
-    user_input = request.json.get("message")
-    return Response(
-        stream_with_context(stream_generation(user_input)),
-        mimetype="text/event-stream"
+@app.post("/conversation")
+async def conversation(request: Request):
+    body = await request.json()
+    user_input = body.get("message")
+    
+    return StreamingResponse(
+        stream_generation(user_input),
+        media_type="text/event-stream"
     )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
