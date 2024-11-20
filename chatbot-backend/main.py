@@ -3,8 +3,7 @@ from flask_cors import CORS
 from transformers import LlamaForCausalLM, PreTrainedTokenizerFast
 from models.go_emotions import EmotionDetector
 import json
-import time
-
+import torch
 
 app = Flask(__name__)
 CORS(app)
@@ -12,56 +11,107 @@ CORS(app)
 # Initialize Llama tokenizer and model
 tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+
+# Set up the pad token
+tokenizer.pad_token = tokenizer.eos_token
+model.config.pad_token_id = tokenizer.pad_token_id
+
 goEmotions_detector = EmotionDetector()
 
-# Function to generate response using Llama
-def generate_response(user_input):
+def stream_generation(user_input):
     try:
-        # Tokenize input and generate a response
-        inputs = tokenizer(user_input, return_tensors="pt")
-        response_ids = model.generate(
-            **inputs,
-            max_new_tokens=150,
-            temperature=0.5,
-            top_p=0.9,
-            do_sample=True
+        # Tokenize input
+        inputs = tokenizer(
+            user_input,
+            return_tensors="pt",
+            add_special_tokens=True
         )
-        complete_response = tokenizer.decode(response_ids[0], skip_special_tokens=True)
+        
+        # Initialize generation parameters
+        max_new_tokens = 150
+        accumulated_text = ""
+        
+        # Set up generation config
+        generation_config = {
+            "max_new_tokens": 1,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "do_sample": True,
+            "pad_token_id": tokenizer.pad_token_id,
+            "return_dict_in_generate": True,
+            "output_scores": False,
+        }
 
-        # Stream the response word by word
-        words = complete_response.split()
-        accumulated_response = ""
-        for i, word in enumerate(words):
-            accumulated_response += word + " "
-            
-            # Generate emotion analysis if necessary
-            emotion = goEmotions_detector.get_emotional_response(user_input, accumulated_response)
-
-            # Create response object
-            response_obj = {
-                "response": accumulated_response.strip(),
-                "is_final": i == len(words) - 1
-            }
-
-            yield json.dumps(response_obj) + '\n'
-            time.sleep(0.1)  # Simulate streaming delay
+        # Keep track of the current context
+        current_input_ids = inputs.input_ids
+        current_attention_mask = inputs.attention_mask
+        
+        while len(accumulated_text.split()) < max_new_tokens:
+            with torch.no_grad():
+                outputs = model.generate(
+                    input_ids=current_input_ids,
+                    attention_mask=current_attention_mask,
+                    **generation_config
+                )
+                
+                # Get the generated sequence
+                generated_sequence = outputs.sequences[0]
+                
+                # Decode only the new tokens
+                new_tokens = generated_sequence[current_input_ids.shape[1]:]
+                new_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+                
+                # Skip if no new text was generated
+                if not new_text.strip():
+                    break
+                
+                # Update accumulated text
+                accumulated_text += new_text
+                
+                # Get emotion analysis
+                emotion = goEmotions_detector.get_emotional_response(
+                    user_input, 
+                    accumulated_text
+                )
+                
+                # Create response object
+                response_obj = {
+                    "response": accumulated_text.strip(),
+                    "is_final": False,
+                    "emotion": emotion
+                }
+                
+                yield json.dumps(response_obj) + '\n'
+                
+                # Update context for next iteration
+                current_input_ids = generated_sequence.unsqueeze(0)
+                current_attention_mask = torch.ones_like(current_input_ids)
+                
+                # Check if we've hit the EOS token
+                if tokenizer.eos_token_id in new_tokens:
+                    break
+        
+        # Send final response
+        final_response = {
+            "response": accumulated_text.strip(),
+            "is_final": True,
+            "emotion": emotion
+        }
+        yield json.dumps(final_response) + '\n'
 
     except Exception as e:
         error_response = {
-            "response": "I'm having trouble responding right now.",
+            "response": f"I'm having trouble responding right now. Error: {str(e)}",
             "is_final": True,
             "error": str(e)
         }
         yield json.dumps(error_response) + '\n'
 
-
-# Route to handle conversation
 @app.route('/conversation', methods=['POST'])
 def conversation():
     user_input = request.json.get("message")
-    
     return Response(
-        stream_with_context(generate_response(user_input)),
+        stream_with_context(stream_generation(user_input)),
         mimetype="text/event-stream"
     )
 
