@@ -4,15 +4,30 @@ import asyncio
 from llama.model_manager import get_model_and_tokenizer
 from llama.prompt_manager import get_initial_prompts
 
-#checking my gpu
-print(torch.cuda.is_available())  # Should return True
-print(torch.cuda.get_device_name(0))  # Should show GPU name
+#decide whether to run model on GPU or CPU
+def check_cuda_availability():
+    """
+    Check CUDA availability and return the appropriate device.
+    
+    Returns:
+        torch.device: 'cuda' if available, otherwise 'cpu'
+    """
+    if torch.cuda.is_available():
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        return torch.device('cuda')
+    else:
+        print("No GPU available. Falling back to CPU.")
+        return torch.device('cpu')
+
 
 # Always start with the initial prompt
 initial_prompts = get_initial_prompts()
 
 async def stream_generation(user_input, tokenizer, model):
     try:
+
+        # Determine the device dynamically
+        device = check_cuda_availability()
          
      # Format the input as a single conversation with initial prompts
         prompt_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in initial_prompts])
@@ -23,7 +38,7 @@ async def stream_generation(user_input, tokenizer, model):
             prompt_text, 
             return_tensors="pt", 
             add_special_tokens=True
-        ).to("cuda")
+        ).to(device)
     
    
     #initialize generation parameters
@@ -41,6 +56,9 @@ async def stream_generation(user_input, tokenizer, model):
             "pad_token_id": tokenizer.eos_token_id,
             "output_scores": False
         }
+
+        # Move model to the same device as inputs
+        model = model.to(device)
 
         # Keep track of the current context
         current_input_ids = inputs.input_ids
@@ -89,7 +107,7 @@ async def stream_generation(user_input, tokenizer, model):
                     await asyncio.sleep(0.1)
                     
                     # Update context for next iteration
-                    current_input_ids = generated_sequence.unsqueeze(0)
+                    current_input_ids = generated_sequence.unsqueeze(0).to(device)
                     current_attention_mask = torch.ones_like(current_input_ids)
                     
                     # Check if we've hit the EOS token
