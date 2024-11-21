@@ -48,8 +48,8 @@ async def stream_generation(user_input, tokenizer, model):
     #set up generation config
         generation_config = {
             "max_new_tokens": 1,
-            "temperature": 0.7,
-            "top_p": 0.9,
+            "temperature": 0.5,
+            "top_p": 0.7,
             "do_sample": True,
             "return_dict_in_generate": True,
             "num_return_sequences": 1,
