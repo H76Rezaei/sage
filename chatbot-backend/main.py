@@ -61,6 +61,40 @@ async def text_to_speech_endpoint(request: Request):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+@app.post("/conversation-audio")
+async def conversation_audio(audio: UploadFile):
+    """
+    End-to-end pipeline for audio-to-audio conversation.
+    """
+    # Step 1: Convert Speech to Text
+    stt_result = voice_to_text(audio)
+    if not stt_result["success"]:
+        return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
+
+    user_input = stt_result["text"]
+    print(f"User said: {user_input}")
+
+    # Step 2: Generate Text Response
+    try:
+        # Stream the response from the LLaMA model
+        response_text = ""
+        async for chunk in stream_generation(user_input, tokenizer, model):
+            data = json.loads(chunk.split("data: ")[1].strip())
+            response_text = data["response"]
+            if data["is_final"]:
+                break
+        print(f"Generated response: {response_text}")
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+    # Step 3: Convert Text Response to Speech
+    try:
+        output_filename = "response.mp3"
+        text_to_speech(response_text, filename=output_filename)
+        return JSONResponse(content={"message": "Conversation completed", "audio_file": output_filename})
+    except Exception as e:
+        return JSONResponse(content={"error": f"Text-to-Speech failed: {str(e)}"}, status_code=500)
+
 
 if __name__ == "__main__":
     import uvicorn
