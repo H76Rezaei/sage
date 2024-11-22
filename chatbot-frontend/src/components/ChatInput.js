@@ -1,29 +1,35 @@
-//Handles user input
-//Triggers handleSendMessage function
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import PropTypes from "prop-types";
 
 function ChatInput({ onSendMessage }) {
-    const [input, setInput] = useState('');
+  const [message, setMessage] = useState("");
 
-    const handleSend = () => {
-        if (input.trim()) {
-            onSendMessage(input);
-            setInput('');
-        }
-    };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (message.trim()) {
+      onSendMessage(message);
+      setMessage("");
+    }
+  };
 
-    return (
-        <div className="chat-input-container">
-            <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type a message..."
-            />
-            <button onClick={handleSend}>Send</button>
-        </div>
-        
-    );
+  return (
+    <form className="chat-input-form" onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Type a message..."
+        className="chat-input"
+      />
+      <button type="submit" className="send-button">
+        Send
+      </button>
+    </form>
+  );
 }
+
+ChatInput.propTypes = {
+  onSendMessage: PropTypes.func.isRequired,
+};
 
 export default ChatInput;

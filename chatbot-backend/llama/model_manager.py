@@ -2,7 +2,7 @@ from transformers import LlamaForCausalLM, PreTrainedTokenizerFast
 
 # Initialize Llama tokenizer and model
 def get_model_and_tokenizer():
-    model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct").to("cuda")
+    model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-3.2-1B-Instruct").to("cpu")
     tokenizer = PreTrainedTokenizerFast.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 
     # Set up the pad token

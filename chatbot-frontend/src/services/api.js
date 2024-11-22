@@ -1,57 +1,61 @@
-export async function sendToBackend(message, onChunk) {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/conversation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message })
-      });
-  
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-  
-      const reader = response.body.getReader();
-      let accumulatedText = '';
-  
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) break;
-        
-        // Convert the chunk to text and parse the JSON
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
-        
-        for (const line of lines) {
-          try {
-            // Remove 'data: ' prefix
-            const jsonStr = line.slice(6).trim();
-            const data = JSON.parse(jsonStr);
-            accumulatedText = data.response;
-            
-            // Call the callback with the current state
-            onChunk({
-              text: accumulatedText,
-              isFinal: data.is_final
-            });
-            
-          } catch (e) {
-            console.error('Error parsing chunk:', e);
-          }
-        }
-      }
-  
-      return { 
-        response: accumulatedText,
+export async function sendToBackend(
+  text,
+  onChunk,
+  isTextToSpeech = false,
+  audioBlob = null
+) {
+  try {
+    let url;
+    let options;
+
+    // If audioBlob exists, send audio file to server for voice-to-text conversion
+    if (audioBlob) {
+      url = "http://127.0.0.1:8000/voice-to-text";
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "audio.wav"); // Add audio to FormData
+      options = {
+        method: "POST",
+        body: formData, // Send audio as POST body
       };
-    } catch (error) {
-      console.error('Error communicating with backend:', error);
-      return { 
-        response: "I'm having trouble responding right now.",
+    } else {
+      // Otherwise, send message to the server for conversation
+      url = "http://127.0.0.1:8000/conversation";
+      options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: text }), // Send the message as JSON
       };
     }
+    console.log("Sending data to:", url);
+    const response = await fetch(url, options); // Send request to the server
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok"); // Handle network error
+    }
+
+    // If it's text-to-speech, play the audio response
+    if (isTextToSpeech) {
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      audio.play(); // Play the audio
+      return;
+    }
+
+    // If the message is text, handle the response and stream data
+    if (text) {
+      const data = await response.json(); // Get the JSON response
+      onChunk({ text: data.text, isFinal: true }); // Pass the text to the parent function
+      return;
+    }
+  } catch (error) {
+    console.error("Error communicating with backend:", error); // Handle errors during communication
+    return {
+      response: "I'm having trouble responding right now.", // Default error response
+    };
   }
-  
-  export default sendToBackend;
+}
+
+export default sendToBackend;

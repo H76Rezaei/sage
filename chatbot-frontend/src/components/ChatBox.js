@@ -1,16 +1,28 @@
-import React from 'react';
+import React from "react";
+import PropTypes from "prop-types";
 
-const ChatBox = ({ messages, loading }) => {
+function ChatBox({ messages, loading }) {
   return (
     <div className="chat-box">
       {messages.map((message, index) => (
-        <div key={index} className={`message ${message.type}`}>
-          <div className="message-text">{message.text}</div>
+        <div
+          key={index}
+          className={`message ${
+            message.type === "user" ? "user-message" : "bot-message"
+          }`}
+        >
+          {message.text}
         </div>
       ))}
-      {loading && <div className="loading">Sage is typing...</div>}
+
+      {loading && <div className="loading">Loading...</div>}
     </div>
   );
+}
+
+ChatBox.propTypes = {
+  messages: PropTypes.array.isRequired,
+  loading: PropTypes.bool.isRequired,
 };
 
 export default ChatBox;
