@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import ChatBox from './components/ChatBox';
-import ChatInput from './components/ChatInput';
-import ChatHistory from './components/ChatHistory';
-import sendToBackend from './services/api';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import ChatBox from "./components/ChatBox";
+import ChatInput from "./components/ChatInput";
+import ChatHistory from "./components/ChatHistory";
+import sendToBackend from "./services/api";
+import "./App.css";
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const storedHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    const storedHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
     setMessages(storedHistory);
   }, []);
 
   const handleSendMessage = async (text) => {
-    const userMessage = { type: 'user', text };
+    const userMessage = { type: "user", text };
     setMessages((prev) => [...prev, userMessage]);
     saveToHistory(userMessage);
 
     setLoading(true);
-    
+
     // Create an initial bot message
-    const botMessage = { type: 'bot', text: ''};
+    const botMessage = { type: "bot", text: "" };
     setMessages((prev) => [...prev, botMessage]);
 
     try {
@@ -31,7 +31,7 @@ function App() {
         setMessages((prev) => {
           const newMessages = [...prev];
           newMessages[newMessages.length - 1] = {
-            type: 'bot',
+            type: "bot",
             text: streamData.text,
           };
           return newMessages;
@@ -40,7 +40,7 @@ function App() {
         // If this is the final chunk, save to history
         if (streamData.isFinal) {
           const finalBotMessage = {
-            type: 'bot',
+            type: "bot",
             text: streamData.text,
           };
           saveToHistory(finalBotMessage);
@@ -52,14 +52,14 @@ function App() {
   };
 
   const clearChatHistory = () => {
-    localStorage.removeItem('chatHistory');
+    localStorage.removeItem("chatHistory");
     setMessages([]);
   };
 
   const saveToHistory = (message) => {
-    const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    const history = JSON.parse(localStorage.getItem("chatHistory")) || [];
     history.push(message);
-    localStorage.setItem('chatHistory', JSON.stringify(history));
+    localStorage.setItem("chatHistory", JSON.stringify(history));
   };
 
   return (
@@ -70,6 +70,7 @@ function App() {
       </header>
       <ChatBox messages={messages} loading={loading} />
       <ChatInput onSendMessage={handleSendMessage} />
+      <VoiceRecorder onSendMessage={handleSendMessage} />
     </div>
   );
 }
