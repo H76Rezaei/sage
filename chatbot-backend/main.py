@@ -36,7 +36,9 @@ async def conversation(request: Request):
 
 @app.post("/voice-to-text")
 async def voice_to_text_endpoint(audio: UploadFile):
-   
+    """
+    Endpoint to convert speech to text.
+    """
     result = voice_to_text(audio)
     if result["success"]:
         return JSONResponse(content={"text": result["text"]})
@@ -45,17 +47,19 @@ async def voice_to_text_endpoint(audio: UploadFile):
     
 @app.post("/text-to-speech")
 async def text_to_speech_endpoint(request: Request):
+    """
+    Endpoint to convert text to speech.
+    """
     data = await request.json()
     text = data.get("text")
+    if not text:
+        return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
 
     try:
-       
         text_to_speech(text)
-        return JSONResponse(content={"message": "Text converted to speech successfully"}, status_code=200)
+        return JSONResponse(content={"message": "Text converted to speech successfully"})
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
-
 
 
 if __name__ == "__main__":
