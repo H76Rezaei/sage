@@ -1,93 +1,40 @@
-/*
-//old code:
-
-import React, { useState } from 'react';
-import { FaMicrophone } from 'react-icons/fa';  // Importing microphone icon from react-icons
-
-function VoiceRecorder() {
-    const [isRecording, setIsRecording] = useState(false);
-
-    const handleRecord = () => {
-        setIsRecording(!isRecording);
-        // You can add logic here to start/stop actual recording
-    };
-
-    return (
-        <button
-            className="voice-recorder-button"
-            onClick={handleRecord}
-            title={isRecording ? "Stop Recording" : "Start Recording"}
-        >
-            <FaMicrophone size={24} color={isRecording ? "red" : "black"} />
-        </button>
-    );
-    
-    */
-
 import React, { useState, useRef } from "react";
 import { FaMicrophone } from "react-icons/fa";
-import sendToBackend from "./services/api";
+import { sendAudioToBackend } from "../services/speechApi";
 
 function VoiceRecorder({ onSendMessage }) {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const mediaRecorderRef = useRef(null); // To hold the media recorder instance
-  const audioStreamRef = useRef(null); // To hold the audio stream instance
+  const mediaRecorderRef = useRef(null);
+  const audioChunks = useRef([]);
 
   const handleRecord = async () => {
     if (isRecording) {
       setIsRecording(false);
-
       mediaRecorderRef.current.stop();
     } else {
-      setIsRecording(true);
-
       try {
-        // Access user's microphone
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        audioStreamRef.current = stream;
+        setIsRecording(true);
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
 
-        const mediaRecorder = new MediaRecorder(stream);
-
-        mediaRecorder.ondataavailable = (e) => {
-          setAudioBlob(e.data);
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          audioChunks.current.push(event.data);
         };
 
-        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorderRef.current.onstop = async () => {
+          const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
+          audioChunks.current = [];
+          const text = await sendAudioToBackend(audioBlob);
+          if (text) onSendMessage(text);
+        };
 
-        mediaRecorder.start();
+        mediaRecorderRef.current.start();
       } catch (err) {
-        console.error("Error accessing the microphone:", err);
+        console.error("Error accessing microphone:", err);
         setIsRecording(false);
       }
     }
   };
-
-  // Function to send audio to backend once recording is stopped
-  const sendAudioToBackend = async () => {
-    if (audioBlob) {
-      try {
-        await sendToBackend(
-          null,
-          (data) => {
-            if (data.isFinal) {
-              onSendMessage(data.text);
-            }
-          },
-          false,
-          audioBlob
-        );
-      } catch (error) {
-        console.error("Error processing audio:", error);
-      }
-    }
-  };
-
-  if (!isRecording && audioBlob) {
-    sendAudioToBackend();
-  }
 
   return (
     <button
@@ -98,7 +45,6 @@ function VoiceRecorder({ onSendMessage }) {
       <FaMicrophone size={24} color={isRecording ? "red" : "black"} />
     </button>
   );
-
 }
 
 export default VoiceRecorder;
