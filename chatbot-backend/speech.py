@@ -6,8 +6,6 @@ from gtts import gTTS
 from playsound import playsound
 import os
 
-
-
 def voice_to_text(audio: UploadFile):
     """
     Convert audio to text using SpeechRecognition.
