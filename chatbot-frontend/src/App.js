@@ -1,12 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import ChatBox from './components/ChatBox';
 import ChatInput from './components/ChatInput';
-import ChatHistory from './components/ChatHistory';
 import VoiceRecorder from './components/VoiceRecorder';
-import sendToBackend from './services/api';
+import { sendConversation } from './services/textApi';
 import './App.css';
-
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -24,29 +21,22 @@ function App() {
 
     setLoading(true);
 
-    // Create an initial bot message
     const botMessage = { type: "bot", text: "" };
     setMessages((prev) => [...prev, botMessage]);
 
     try {
-      await sendToBackend(text, (streamData) => {
-        // Update the bot's message with the streamed text
+      await sendConversation(text, (streamData) => {
         setMessages((prev) => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = {
+          const updatedMessages = [...prev];
+          updatedMessages[updatedMessages.length - 1] = {
             type: "bot",
             text: streamData.text,
           };
-          return newMessages;
+          return updatedMessages;
         });
 
-        // If this is the final chunk, save to history
         if (streamData.isFinal) {
-          const finalBotMessage = {
-            type: "bot",
-            text: streamData.text,
-          };
-          saveToHistory(finalBotMessage);
+          saveToHistory({ type: "bot", text: streamData.text });
         }
       });
     } finally {
@@ -54,15 +44,15 @@ function App() {
     }
   };
 
-  const clearChatHistory = () => {
-    localStorage.removeItem("chatHistory");
-    setMessages([]);
-  };
-
   const saveToHistory = (message) => {
     const history = JSON.parse(localStorage.getItem("chatHistory")) || [];
     history.push(message);
     localStorage.setItem("chatHistory", JSON.stringify(history));
+  };
+
+  const clearChatHistory = () => {
+    localStorage.removeItem("chatHistory");
+    setMessages([]);
   };
 
   return (
