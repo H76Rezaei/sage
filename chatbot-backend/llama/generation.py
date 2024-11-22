@@ -41,7 +41,7 @@ async def generate_response(user_input, tokenizer, model):
         ).to(device)
 
         # Initialize parameters
-        max_new_tokens = 200
+        max_new_tokens = 500
         accumulated_text = ""
         
         generation_config = {
