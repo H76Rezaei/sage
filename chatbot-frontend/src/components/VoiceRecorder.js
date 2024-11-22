@@ -1,8 +1,7 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone } from "react-icons/fa";
-import { sendAudioToBackend } from "../services/speechApi";
 
-function VoiceRecorder({ onSendMessage }) {
+function VoiceRecorder({ onSendAudioMessage }) {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunks = useRef([]);
@@ -24,10 +23,13 @@ function VoiceRecorder({ onSendMessage }) {
         mediaRecorderRef.current.onstop = async () => {
           const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
           audioChunks.current = [];
-          const text = await sendAudioToBackend(audioBlob);
-          if (text) onSendMessage(text);
+          if (typeof onSendAudioMessage === "function") {
+            await onSendAudioMessage(audioBlob);
+          } else {
+            console.error("onSendAudioMessage is not a valid function");
+          }
         };
-
+        
         mediaRecorderRef.current.start();
       } catch (err) {
         console.error("Error accessing microphone:", err);
