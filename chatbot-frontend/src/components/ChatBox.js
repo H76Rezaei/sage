@@ -1,10 +1,11 @@
 import React from "react";
-import { FaPlay } from "react-icons/fa"; // Play icon for the button
+import { playAudioMessage } from "../services/speechApi";
+import { FaPlay } from "react-icons/fa";
 
 const ChatBox = ({ messages, loading }) => {
   const handlePlayMessage = async (text) => {
     try {
-      await sendToBackend(text, null, true);
+      await playAudioMessage(text);
     } catch (error) {
       console.error("Error playing the message:", error);
     }
@@ -15,7 +16,6 @@ const ChatBox = ({ messages, loading }) => {
       {messages.map((message, index) => (
         <div key={index} className={`message ${message.type}`}>
           <div className="message-text">{message.text}</div>
-
           {message.type === "bot" && (
             <button onClick={() => handlePlayMessage(message.text)}>
               <FaPlay size={20} />
@@ -23,7 +23,6 @@ const ChatBox = ({ messages, loading }) => {
           )}
         </div>
       ))}
-
       {loading && <div className="loading">Sage is typing...</div>}
     </div>
   );
