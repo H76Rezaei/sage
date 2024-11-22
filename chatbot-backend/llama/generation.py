@@ -2,7 +2,7 @@ import json
 import torch
 import asyncio
 from llama.model_manager import get_model_and_tokenizer
-from llama.prompt_manager import get_initial_prompts
+from llama.prompt_manager import get_initial_prompts, detect_emotion_tag, generate_emotion_prompt
 
 def check_cuda_availability():
     """
@@ -28,10 +28,16 @@ async def generate_response(user_input, tokenizer, model):
     try:
         device = check_cuda_availability()
         
+        # Detect emotion and generate relevant components
+        emotion_tag = detect_emotion_tag(user_input)
+        emotion_prompt = generate_emotion_prompt(emotion_tag.strip("[Emotion: ]"))
+
         # Format the input
         initial_prompts = get_initial_prompts()
         prompt_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in initial_prompts])
-        prompt_text += f"\nUser: {user_input}\nAssistant:"
+        prompt_text += f"\n{emotion_tag} {emotion_prompt}\nUser: {user_input}\nAssistant:"
+        #prompt_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in initial_prompts])
+        #prompt_text += f"\nUser: {user_input}\nAssistant:"
 
         # Tokenize input
         inputs = tokenizer(
