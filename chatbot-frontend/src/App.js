@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from "react";
-import ChatBox from "./components/ChatBox";
-import ChatInput from "./components/ChatInput";
-import ChatHistory from "./components/ChatHistory";
-import sendToBackend from "./services/api";
-import "./App.css";
+
+import React, { useState, useEffect } from 'react';
+import ChatBox from './components/ChatBox';
+import ChatInput from './components/ChatInput';
+import ChatHistory from './components/ChatHistory';
+import VoiceRecorder from './components/VoiceRecorder';
+import sendToBackend from './services/api';
+import './App.css';
+
 
 function App() {
   const [messages, setMessages] = useState([]);

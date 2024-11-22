@@ -1,4 +1,8 @@
+from emotion_detection.go_emotions import EmotionDetector
+
+#initial default system prompt
 def get_initial_prompts():
+    """initial default system prompt"""
     return [
         {"role": "system", "content": (
             "You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs. While empathetic, prioritize understanding and addressing the user's intent clearly."
@@ -11,7 +15,38 @@ def get_initial_prompts():
         )},
     ]
 
+#initialize emotion detector class
+emotion_detector = EmotionDetector()
+
+# returns detected emotion as tag
+def detect_emotion_tag(user_input):
+    """
+    Detect the primary emotion from the user input and return it as a tag.
+    """
+    emotion_data = emotion_detector.detect_emotion(user_input)
+    return f"[Emotion: {emotion_data['primary_emotion']}]"
+
+# returns a prompt based on detected emotion
+def generate_emotion_prompt(emotion):
+    """
+    Generate an additional prompt based on the detected emotion.
+    """
+    emotion_prompts = {
+        "joy": "The user is happy, match their energy, and try to get them to talk more about the source of their happiness",
+        "sadness": "The user is sad, provide support and be an empathetic conversation partner",
+        "anger": "It sounds like you're upset. Let me know how I can help.",
+        "neutral": "Let’s continue our conversation in a balanced tone.",
+        "confusion": "The user is feeling confused, try your best to help them explore their problem."
+        # we gotta work on prompts more
+    }
+    return emotion_prompts.get(emotion, "How can I assist you further?")
+
+
+#Reihaneh prompts
 def get_other_prompts():
+    """
+    other prompt example
+    """
     return [
         {"role": "system", "content": (
             "You are a friendly digital companion for elderly individuals. "

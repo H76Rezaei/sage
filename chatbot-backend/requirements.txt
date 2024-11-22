@@ -17,13 +17,10 @@ scripts==3.0
 setuptools==75.5.0
 threadpoolctl==3.5.0
 tokenizers==0.20.3
-torch==2.5.1+cu118
-#torchaudio==2.5.1+cu118
-#torchvision==0.20.1+cu118
+torch==2.5.1
 tqdm==4.67.0
 transformers==4.46.2
 typing_extensions==4.12.2
 urllib3==2.2.3
 uvicorn==0.32.0
 wcwidth==0.2.13
-#Werkzeug==3.1.3
