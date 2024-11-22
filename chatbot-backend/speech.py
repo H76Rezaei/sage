@@ -4,12 +4,14 @@ from fastapi import UploadFile
 
 from gtts import gTTS
 from playsound import playsound
-
+import os
 
 
 
 def voice_to_text(audio: UploadFile):
-  
+    """
+    Convert audio to text using SpeechRecognition.
+    """
     recognizer = sr.Recognizer()
     
     # Read audio data from UploadFile
@@ -32,6 +34,10 @@ def voice_to_text(audio: UploadFile):
 
 # Function to convert text to speech
 def text_to_speech(text, filename='response.mp3'):
-   
+    """
+    Convert text to speech and save as an MP3 file.
+    """
     tts = gTTS(text=text, lang='en')
     tts.save(filename)
+    # Optionally, play the sound if needed
+    os.system(f"start {filename}")
