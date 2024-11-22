@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import VoiceRecorder from "./VoiceRecorder";
 
-function ChatInput({ onSendMessage }) {
+function ChatInput({ onSendMessage, onSendAudioMessage }) {
   const [input, setInput] = useState("");
 
   const handleSend = () => {
@@ -12,6 +13,7 @@ function ChatInput({ onSendMessage }) {
 
   return (
     <div className="chat-footer">
+      <VoiceRecorder onSendAudioMessage={onSendAudioMessage} />
       <div className="chat-input-container">
         <input
           type="text"

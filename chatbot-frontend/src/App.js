@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ChatBox from "./components/ChatBox";
 import ChatInput from "./components/ChatInput";
-import VoiceRecorder from "./components/VoiceRecorder";
 import { sendConversation } from "./services/textApi";
 import { sendAudioToBackend, playAudioMessage } from "./services/speechApi";
 import "./App.css";
@@ -73,8 +72,10 @@ function App() {
         <button onClick={clearChatHistory}>Clear History</button>
       </header>
       <ChatBox messages={messages} loading={loading} onPlayMessage={playAudioMessage} />
-      <ChatInput onSendMessage={handleSendMessage} />
-      <VoiceRecorder onSendAudioMessage={handleSendAudioMessage} />
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        onSendAudioMessage={handleSendAudioMessage}
+      />
     </div>
   );
 }
