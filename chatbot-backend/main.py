@@ -10,8 +10,6 @@ from llama.prompt_manager import get_initial_prompts
 #llama model and tokenizer
 model, tokenizer = get_model_and_tokenizer()
 
-
-
 app = FastAPI()
 
 # Add CORS middleware
@@ -22,7 +20,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.post("/conversation")
 async def conversation(request: Request):
