@@ -1,83 +1,41 @@
-import React, { useState, useEffect } from "react";
-import ChatBox from "./components/ChatBox";
-import ChatInput from "./components/ChatInput";
+import React, { useState } from 'react';
+import MainPage from './components/MainPage';
+import TextChat from './components/TextChat';
+import VoiceChat from './components/VoiceChat';
 import { sendConversation } from "./services/textApi";
 import { sendAudioToBackend, playAudioMessage } from "./services/speechApi";
-import "./App.css";
 
 function App() {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [chatHistory, setChatHistory] = useState([]);
 
-  useEffect(() => {
-    const storedHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
-    setMessages(storedHistory);
-  }, []);
-
-  const handleSendMessage = async (text) => {
-    const userMessage = { type: "user", text };
-    setMessages((prev) => [...prev, userMessage]);
-    saveToHistory(userMessage);
-
-    setLoading(true);
-    const botMessage = { type: "bot", text: "" };
-    setMessages((prev) => [...prev, botMessage]);
-
-    try {
-      await sendConversation(text, (streamData) => {
-        setMessages((prev) => {
-          const updatedMessages = [...prev];
-          updatedMessages[updatedMessages.length - 1] = {
-            type: "bot",
-            text: streamData.text,
-          };
-          return updatedMessages;
-        });
-
-        if (streamData.isFinal) {
-          saveToHistory({ type: "bot", text: streamData.text });
+    const saveToHistory = (message) => {
+        const updatedHistory = [...chatHistory, message];
+        setChatHistory(updatedHistory);
+        localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
+    };
+    const renderContent = () => {
+        if (selectedOption === 'text') {
+            //return <TextChat onSelectOption={setSelectedOption} />;
+            return <TextChat onSelectOption={setSelectedOption} sendConversation={sendConversation}
+            saveToHistory={saveToHistory} />;
         }
-      });
-    } catch (error) {
-      console.error("Error during conversation:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (selectedOption === 'voice') {
+            return (
+                <VoiceChat 
+                    onSelectOption={setSelectedOption} 
+                    sendAudioToBackend={sendAudioToBackend} 
+                    playAudioMessage={playAudioMessage} 
+                    saveToHistory={saveToHistory}
+                />
+            );
+        }
+        return <MainPage onSelectOption={setSelectedOption} />;
+    };
 
-  const handleSendAudioMessage = async (audioBlob) => {
-    try {
-      const text = await sendAudioToBackend(audioBlob);
-      if (text) await handleSendMessage(text);
-    } catch (error) {
-      console.error("Error processing audio:", error);
-    }
-  };
 
-  const saveToHistory = (message) => {
-    const history = JSON.parse(localStorage.getItem("chatHistory")) || [];
-    history.push(message);
-    localStorage.setItem("chatHistory", JSON.stringify(history));
-  };
 
-  const clearChatHistory = () => {
-    localStorage.removeItem("chatHistory");
-    setMessages([]);
-  };
-
-  return (
-    <div className="chat-container">
-      <header className="chat-header">
-        <h1>Chatbot</h1>
-        <button onClick={clearChatHistory}>Clear History</button>
-      </header>
-      <ChatBox messages={messages} loading={loading} onPlayMessage={playAudioMessage} />
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        onSendAudioMessage={handleSendAudioMessage}
-      />
-    </div>
-  );
+    return <div className="app-container">{renderContent()}</div>;
 }
 
 export default App;
