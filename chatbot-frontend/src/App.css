@@ -8,7 +8,7 @@
 
 .chat-header {
   padding: 15px;
-  background: #4caf50;
+  background: #4CAF50;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -36,7 +36,7 @@
 */
 .chat-input-container button {
   padding: 10px;
-  background: #4caf50;
+  background: #4CAF50;
   color: white;
   border: none;
   cursor: pointer;
@@ -109,24 +109,9 @@
   font-style: italic;
 }
 
+
 .message {
   display: flex;
   flex-direction: column;
   margin-bottom: 10px;
-}
-
-#voice .voice-recorder-button {
-  background-color: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 10px;
-  margin: 10px;
-}
-
-.voice-recorder-button:focus {
-  outline: none;
-}
-
-.voice-recorder-button svg {
-  transition: color 0.3s;
 }
