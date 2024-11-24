@@ -1,31 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
 import './TextChat.css';
 
-const TextChat = ({ onSelectOption, sendConversation }) => {
+//added saveToHistory to method parameters
+const TextChat = ({ onSelectOption, sendConversation, saveToHistory }) => {
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  // added a const: currentResponseRef
+  const currentResponseRef = useRef('');
 
   const handleSend = async () => {
     if (message.trim() && !isTyping) {
-      const newMessage = { text: message, sender: 'user' };
-      setChatHistory(prev => [...prev, newMessage]);
+      //renamed const newMessage to userMessage
+      const userMessage = { text: message, sender: 'user' };
+      setChatHistory(prev => [...prev, userMessage]);
+      //used saveToHistory()
+      saveToHistory(userMessage);
+      
+
+      // updated this part to handle backend chunk by chunk streaming:
+
+      const currentMessage = message;
       setMessage('');
       setIsTyping(true);
+      currentResponseRef.current = '';
 
       try {
-        // Send user message to the backend and get the response
-        const response = await sendConversation(message);
+        await sendConversation(currentMessage, (data) => {
+          if (data.response) {
+            currentResponseRef.current = data.response;
+            
+            // Update chat history with the current accumulated response
+            setChatHistory(prev => {
+              const newHistory = prev.filter(msg => 
+                !(msg.sender === 'bot' && msg.isPartial)
+              );
+              return [...newHistory, {
+                text: currentResponseRef.current,
+                sender: 'bot',
+                isPartial: !data.is_final
+              }];
+            });
 
-        // Update the chat history with the bot's response
-        if (response && response.data) {
-          const botMessage = { text: response.data.reply, sender: 'bot' };
-          setChatHistory(prev => [...prev, botMessage]);
-        }
+            // Save to history only when the response is final
+            if (data.is_final) {
+              saveToHistory({
+                text: currentResponseRef.current,
+                sender: 'bot'
+              });
+            }
+          }
+        });
       } catch (error) {
         console.error('Error communicating with the backend:', error);
-        setChatHistory(prev => [...prev, { text: 'Error: Unable to get a response.', sender: 'bot' }]);
+        const errorMessage = { 
+          text: 'Error: Unable to connect to the server. Please try again.',
+          sender: 'bot'
+        };
+        setChatHistory(prev => [...prev, errorMessage]);
+        saveToHistory(errorMessage);
       } finally {
         setIsTyping(false);
       }
@@ -41,7 +75,7 @@ const TextChat = ({ onSelectOption, sendConversation }) => {
         </button>
         <h1>Text Chat</h1>
       </div>
-
+      
       {/* Chat Messages */}
       <div className="messages-container">
         {chatHistory.map((msg, index) => (
@@ -51,7 +85,7 @@ const TextChat = ({ onSelectOption, sendConversation }) => {
           >
             {msg.text}
           </div>
-        ))}
+        ))}        
       </div>
 
       {/* Input Area */}
