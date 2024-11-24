@@ -9,7 +9,6 @@ from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
 from speech import  voice_to_text , text_to_speech
 
-
 #llama model and tokenizer
 model, tokenizer = get_model_and_tokenizer()
 
