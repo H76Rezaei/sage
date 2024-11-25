@@ -14,12 +14,18 @@ function App() {
         setChatHistory(updatedHistory);
         localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
     };
+
+
     const renderContent = () => {
         if (selectedOption === 'text') {
-            //return <TextChat onSelectOption={setSelectedOption} />;
-            return <TextChat onSelectOption={setSelectedOption} sendConversation={sendConversation}
-            saveToHistory={saveToHistory} />;
-        }
+        return (
+            <TextChat 
+                onSelectOption={setSelectedOption} 
+                sendConversation={sendConversation} 
+                saveToHistory={saveToHistory} 
+            />
+        );
+    }
         if (selectedOption === 'voice') {
             return (
                 <VoiceChat 

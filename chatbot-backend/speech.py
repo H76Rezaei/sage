@@ -39,3 +39,4 @@ def text_to_speech(text, filename='response.mp3'):
     tts.save(filename)
     # Optionally, play the sound if needed
     os.system(f"start {filename}")
+

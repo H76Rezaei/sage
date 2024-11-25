@@ -2,65 +2,82 @@ import React, { useState, useRef } from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
 import './TextChat.css';
 
-//added saveToHistory to method parameters
 const TextChat = ({ onSelectOption, sendConversation, saveToHistory }) => {
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  // added a const: currentResponseRef
-  const currentResponseRef = useRef('');
+  const streamedResponseRef = useRef('');
 
   const handleSend = async () => {
     if (message.trim() && !isTyping) {
-      //renamed const newMessage to userMessage
-      const userMessage = { text: message, sender: 'user' };
-      setChatHistory(prev => [...prev, userMessage]);
-      //used saveToHistory()
-      saveToHistory(userMessage);
+      const userMessage = { 
+        text: message, 
+        sender: 'user',
+        id: Date.now() // Unique identifier for each message
+      };
       
-
-      // updated this part to handle backend chunk by chunk streaming:
+      // Add user message to chat history
+      setChatHistory(prev => [...prev, userMessage]);
+      saveToHistory(userMessage);
 
       const currentMessage = message;
       setMessage('');
       setIsTyping(true);
-      currentResponseRef.current = '';
+      streamedResponseRef.current = ''; // Reset streamed response
 
       try {
-        await sendConversation(currentMessage, (data) => {
-          if (data.response) {
-            currentResponseRef.current = data.response;
+        await sendConversation(currentMessage, (streamData) => {
+          // Accumulate response if it exists
+          if (streamData.response) {
+            streamedResponseRef.current += streamData.response;
+          }
+          
+          // Update chat history
+          setChatHistory(prevHistory => {
+            const newHistory = [...prevHistory];
             
-            // Update chat history with the current accumulated response
-            setChatHistory(prev => {
-              const newHistory = prev.filter(msg => 
-                !(msg.sender === 'bot' && msg.isPartial)
-              );
-              return [...newHistory, {
-                text: currentResponseRef.current,
-                sender: 'bot',
-                isPartial: !data.is_final
-              }];
-            });
+            // Find existing bot message for this conversation
+            const lastBotMessageIndex = newHistory.findLastIndex(msg => 
+              msg.sender === 'bot' && msg.conversationId === userMessage.id
+            );
+            
+            const botMessage = {
+              text: streamedResponseRef.current,
+              sender: 'bot',
+              conversationId: userMessage.id, // Link to user message
+              isPartial: !streamData.is_final,
+              id: Date.now() // Unique identifier
+            };
 
-            // Save to history only when the response is final
-            if (data.is_final) {
-              saveToHistory({
-                text: currentResponseRef.current,
-                sender: 'bot'
-              });
+            if (lastBotMessageIndex !== -1) {
+              // Update existing bot message
+              newHistory[lastBotMessageIndex] = botMessage;
+            } else {
+              // Add new bot message
+              newHistory.push(botMessage);
             }
+
+            return newHistory;
+          });
+
+          // Save to history only when final
+          if (streamData.is_final) {
+            saveToHistory({
+              text: streamedResponseRef.current,
+              sender: 'bot'
+            });
+            setIsTyping(false);
           }
         });
       } catch (error) {
         console.error('Error communicating with the backend:', error);
         const errorMessage = { 
           text: 'Error: Unable to connect to the server. Please try again.',
-          sender: 'bot'
+          sender: 'bot',
+          id: Date.now()
         };
         setChatHistory(prev => [...prev, errorMessage]);
         saveToHistory(errorMessage);
-      } finally {
         setIsTyping(false);
       }
     }
@@ -81,7 +98,7 @@ const TextChat = ({ onSelectOption, sendConversation, saveToHistory }) => {
         {chatHistory.map((msg, index) => (
           <div
             key={index}
-            className={`message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`}
+            className={`message ${msg.sender === 'user' ? 'user-message' : 'bot-message'} ${msg.isPartial ? 'partial-message' : ''}`}
           >
             {msg.text}
           </div>
