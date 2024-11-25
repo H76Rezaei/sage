@@ -13,30 +13,31 @@ export async function sendToBackend(message, onChunk) {
     }
 
     const reader = response.body.getReader();
-    let accumulatedText = '';
+    let accumulatedText = ''; // Store the accumulated text
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) break;
-      
+
       // Convert the chunk to text and parse the JSON
       const chunk = new TextDecoder().decode(value);
       const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
-      
+
       for (const line of lines) {
         try {
-          // Remove 'data: ' prefix
-          const jsonStr = line.slice(6).trim();
+          const jsonStr = line.slice(6).trim(); // Remove 'data: ' prefix
           const data = JSON.parse(jsonStr);
-          accumulatedText = data.response;
-          
+
+          // Append the new token to the accumulated text
+          accumulatedText += data.response;
+
           // Call the callback with the current state
           onChunk({
             text: accumulatedText,
             isFinal: data.is_final
           });
-          
+
         } catch (e) {
           console.error('Error parsing chunk:', e);
         }
@@ -44,7 +45,7 @@ export async function sendToBackend(message, onChunk) {
     }
 
     return { 
-      response: accumulatedText,
+      response: accumulatedText, // Return the full response at the end
     };
   } catch (error) {
     console.error('Error communicating with backend:', error);

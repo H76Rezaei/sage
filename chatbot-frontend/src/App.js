@@ -28,17 +28,17 @@ function App() {
 
     try {
       await sendToBackend(text, (streamData) => {
-        // Update the bot's message with the streamed text
+        // Update the bot's message with the accumulated text
         setMessages((prev) => {
           const newMessages = [...prev];
           newMessages[newMessages.length - 1] = {
             type: 'bot',
-            text: streamData.text,
+            text: streamData.text, // Use accumulated text here
           };
           return newMessages;
         });
-
-        // If this is the final chunk, save to history
+    
+        // Save final message to history
         if (streamData.isFinal) {
           const finalBotMessage = {
             type: 'bot',
@@ -49,8 +49,8 @@ function App() {
       });
     } finally {
       setLoading(false);
-    }
-  };
+  }
+}
 
   const clearChatHistory = () => {
     localStorage.removeItem('chatHistory');
