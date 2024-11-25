@@ -1,0 +1,86 @@
+
+  .container {
+    height: 100vh;
+    max-height: 100vh;
+    width: 100%;
+    max-width: 480px; /* Mobile width */
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: rgb(249, 250, 251);
+  }
+  
+  .chat-wrapper {
+    width: 100%;
+    max-width: 24rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .welcome-section {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .welcome-section svg {
+    width: 5rem;
+    height: 5rem;
+    color: rgb(59, 130, 246);
+  }
+  
+  .welcome-section h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: rgb(31, 41, 55);
+  }
+  
+  .buttons-container {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .chat-button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background-color: white;
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .chat-button:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .chat-button svg {
+    width: 2rem;
+    height: 2rem;
+    color: rgb(59, 130, 246);
+  }
+  
+  .chat-button span {
+    color: rgb(55, 65, 81);
+    font-weight: 500;
+  }
+  
+  /* Media query for smaller screens */
+  @media (max-width: 380px) {
+    .buttons-container {
+      flex-direction: column;
+    }
+  }
