@@ -52,10 +52,16 @@ async def conversation(request: Request):
     
     async def response_stream():
         async for token in chatbot.process_input("default_user", user_input):
-            yield token
+            yield f"data: {json.dumps({'response': token, 'is_final': False})}\n\n"
+        yield f"data: {json.dumps({'response': '', 'is_final': True})}\n\n"
+        #async for token in chatbot.process_input("default_user", user_input):
+        #    yield token
     
-    return StreamingResponse(response_stream(), media_type="text/event-stream")
-
+    return StreamingResponse(
+        response_stream(),
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+        media_type="text/event-stream"
+    )
     """ return StreamingResponse(
         stream_generation(user_input, tokenizer, model),
         media_type="text/event-stream"
