@@ -46,7 +46,7 @@ class DigitalCompanion:
         """ chain = LLMChain(   ## maybe we should delete the chain
             llm = self.llm,
             prompt = self.prompt,
-            verbose = False,    ##change to False, need for testing
+            verbose = True,    ##change to False, need for testing
             memory = memory
             
         ) """
