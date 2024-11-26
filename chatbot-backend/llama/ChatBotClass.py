@@ -38,7 +38,7 @@ class DigitalCompanion:
         memory = ConversationSummaryBufferMemory(
             llm = self.llm,
             memory_key="chat_history",
-            return_messages=True,
+            return_messages=False,
             max_history_length=self.max_history_length,
             max_token_limit=self.max_tokens_limit
         )
