@@ -1,10 +1,9 @@
 import speech_recognition as sr
 from io import BytesIO
 from fastapi import UploadFile
-
 from gtts import gTTS
-from playsound import playsound
 import os
+from playsound import playsound
 
 def voice_to_text(audio: UploadFile):
     """
@@ -29,7 +28,6 @@ def voice_to_text(audio: UploadFile):
     except sr.RequestError as e:
         return {"success": False, "error": f"Could not request results from Google Speech Recognition service; {str(e)}"}
 
-
 # Function to convert text to speech
 def text_to_speech(text, filename='response.mp3'):
     """
@@ -37,6 +35,9 @@ def text_to_speech(text, filename='response.mp3'):
     """
     tts = gTTS(text=text, lang='en')
     tts.save(filename)
-    # Optionally, play the sound if needed
-    os.system(f"start {filename}")
-
+    
+    # Optionally, play the sound if needed   
+    try:
+        playsound(filename)
+    except Exception as e:
+        print(f"Error playing sound: {e}")

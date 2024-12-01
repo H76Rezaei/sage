@@ -1,81 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Mic, MicOff } from 'lucide-react';
-import './VoiceChat.css';
+import React, { useState, useRef } from "react";
+import { ArrowLeft, Mic, MicOff } from "lucide-react"; // افزودن آیکون‌های میکروفون
+import "./VoiceChat.css"; // استایل‌هایی که برای این کامپوننت استفاده می‌شود
 
-const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage }) => {
+const VoiceChat = ({
+  onSelectOption,
+  sendAudioToBackend,
+  playAudioMessage,
+}) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
   const [chatHistory, setChatHistory] = useState([]);
 
-  useEffect(() => {
-    setupMediaRecorder();
-  }, []);
+  // شروع ضبط
+  const startRecording = async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        const mediaRecorder = new MediaRecorder(stream);
 
-  const setupMediaRecorder = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = handleDataAvailable; // ذخیره داده‌های صوتی
+        mediaRecorder.onstop = handleStop; // هنگامی که ضبط متوقف شد
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          setAudioChunks((chunks) => [...chunks, event.data]);
-        }
-      };
+        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.start(); // ضبط شروع می‌شود
 
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        setIsRecording(true); // وضعیت ضبط فعال می‌شود
+      } catch (err) {
+        console.error("Error accessing audio devices:", err);
+      }
+    }
+  };
 
-        setChatHistory((prev) => [
-          ...prev,
-          { type: 'audio', sender: 'user', content: audioUrl }
-        ]);
+  // توقف ضبط
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop(); // ضبط متوقف می‌شود
+    }
+    setIsRecording(false); // وضعیت ضبط غیرفعال می‌شود
+  };
 
-        try {
-          // Send the audio to the backend
-          const response = await sendAudioToBackend(audioBlob);
+  // مدیریت داده‌های صوتی
+  const handleDataAvailable = async (event) => {
+    if (event.data.size > 0) {
+      const chunk = event.data;
+      chunksRef.current.push(chunk); // ذخیره قطعات داده‌های صوتی
+      await sendChunkToAPI(chunk); // ارسال قطعات به API
+    }
+  };
 
-          // Display the bot's audio message in the chat
-          if (response && response.data) {
-            const botAudioUrl = response.data.audioUrl; // Replace with your API response field
-            setChatHistory((prev) => [
-              ...prev,
-              { type: 'audio', sender: 'bot', content: botAudioUrl }
-            ]);
+  // مدیریت زمانی که ضبط متوقف می‌شود
+  const handleStop = () => {
+    const audioBlob = new Blob(chunksRef.current, { type: "audio/wav" });
+    const audioUrl = URL.createObjectURL(audioBlob); // تبدیل داده صوتی به URL
 
-            // Optionally play the bot's response
-            await playAudioMessage(botAudioUrl);
-          }
-        } catch (error) {
-          console.error('Error sending audio to the backend:', error);
+    setChatHistory((prev) => [
+      ...prev,
+      { type: "audio", sender: "user", content: audioUrl },
+    ]);
+
+    // ارسال داده صوتی به سرور
+    sendAudioToBackend(audioBlob)
+      .then(async (response) => {
+        if (response && response.data) {
+          const botAudioUrl = response.data.audioUrl;
           setChatHistory((prev) => [
             ...prev,
-            { type: 'text', sender: 'bot', content: 'Error: Unable to process the audio.' }
+            { type: "audio", sender: "bot", content: botAudioUrl },
           ]);
+
+          // پخش پیام صوتی
+          await playAudioMessage(botAudioUrl);
         }
+      })
+      .catch((error) => {
+        console.error("Error sending audio to the backend:", error);
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            type: "text",
+            sender: "bot",
+            content: "Error: Unable to process the audio.",
+          },
+        ]);
+      });
 
-        setAudioChunks([]);
-      };
+    chunksRef.current = []; // پاک کردن قطعات صوتی پس از توقف ضبط
+  };
 
-      setMediaRecorder(recorder);
+  // ارسال قطعه صوتی به API
+  const sendChunkToAPI = async (chunk) => {
+    const formData = new FormData();
+    formData.append("audio", chunk, `chunk-${Date.now()}.webm`);
+
+    try {
+      const response = await fetch("/api/upload-audio-chunk", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload audio chunk");
+      }
     } catch (error) {
-      console.error('Error accessing microphone:', error);
-      alert('Unable to access microphone. Please check your permissions.');
-    }
-  };
-
-  const startRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.start();
-      setIsRecording(true);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      setIsRecording(false);
+      console.error("Error uploading audio chunk:", error);
     }
   };
 
@@ -94,9 +124,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage }) => 
         {chatHistory.map((msg, index) => (
           <div
             key={index}
-            className={`message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`}
+            className={`message ${
+              msg.sender === "user" ? "user-message" : "bot-message"
+            }`}
           >
-            {msg.type === 'audio' ? (
+            {msg.type === "audio" ? (
               <audio controls src={msg.content} className="audio-player" />
             ) : (
               msg.content
@@ -104,7 +136,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage }) => 
           </div>
         ))}
 
-        {/* Listening Animation */}
+        {/* Animation when recording */}
         {isRecording && (
           <div className="listening-indicator">
             <div className="listening-text">Listening...</div>
@@ -122,7 +154,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage }) => 
       {/* Recording Controls */}
       <div className="voice-controls">
         <button
-          className={`record-button ${isRecording ? 'recording' : ''}`}
+          className={`record-button ${isRecording ? "recording" : ""}`}
           onClick={isRecording ? stopRecording : startRecording}
         >
           {isRecording ? (

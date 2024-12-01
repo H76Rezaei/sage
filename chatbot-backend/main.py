@@ -65,7 +65,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,11 +95,15 @@ async def voice_to_text_endpoint(audio: UploadFile):
     """
     Endpoint to convert speech to text.
     """
-    result = voice_to_text(audio)
-    if result["success"]:
-        return JSONResponse(content={"text": result["text"]})
-    else:
-        return JSONResponse(content={"error": result["error"]}, status_code=400)
+    try:
+        result = voice_to_text(audio)
+        if result["success"]:
+            return JSONResponse(content={"text": result["text"]})
+        else:
+            return JSONResponse(content={"error": result["error"]}, status_code=400)
+    except Exception as e:
+        return JSONResponse(content={"error": f"Server error: {str(e)}"}, status_code=500)
+
     
 @app.post("/text-to-speech")
 async def text_to_speech_endpoint(request: Request):
