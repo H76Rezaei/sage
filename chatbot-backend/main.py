@@ -10,6 +10,12 @@ from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
 from speech import  voice_to_text , text_to_speech
 
+
+from pydub import AudioSegment
+from io import BytesIO
+from fastapi import UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+import ffmpeg
 #SYSTEM_PROMPT = """ You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs. While empathetic, prioritize understanding and addressing the user's intent clearly.
 #                    You are a conversational AI designed to engage with users in a friendly, supportive, and contextually appropriate way. 
 #                    - Respond empathetically if the user shares feelings, but avoid making assumptions about their emotions. 
@@ -65,11 +71,28 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+# Define the function to convert audio to WAV using ffmpeg
+async def convert_to_wav(audio: UploadFile):
+    try:
+        audio_data = await audio.read() 
+        input_audio = BytesIO(audio_data)  
+        output_audio = BytesIO()  
+
+        # Use ffmpeg to convert the input audio to WAV format
+        ffmpeg.input('pipe:0').output('pipe:1', format='wav').run(input=input_audio, output=output_audio)
+
+        output_audio.seek(0)  
+        return output_audio  
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
 
 @app.post("/conversation")
 async def conversation(request: Request):
@@ -91,18 +114,24 @@ async def conversation(request: Request):
 
 
 @app.post("/voice-to-text")
-async def voice_to_text_endpoint(audio: UploadFile):
+async def voice_to_text_endpoint(audio: UploadFile = File(...)):
     """
-    Endpoint to convert speech to text.
+    Endpoint to convert audio to text.
     """
     try:
-        result = voice_to_text(audio)
-        if result["success"]:
-            return JSONResponse(content={"text": result["text"]})
-        else:
-            return JSONResponse(content={"error": result["error"]}, status_code=400)
+        # Convert audio to WAV format first
+        wav_audio = await convert_to_wav(audio)
+
+        # Pass the WAV audio to voice_to_text function (You can integrate your STT model here)
+        stt_result = voice_to_text(wav_audio)
+        
+        if not stt_result["success"]:
+            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
+
+        return JSONResponse(content={"text": stt_result["text"]})
+    
     except Exception as e:
-        return JSONResponse(content={"error": f"Server error: {str(e)}"}, status_code=500)
+        raise HTTPException(status_code=500, detail=f"Error processing the audio: {str(e)}")
 
     
 @app.post("/text-to-speech")
@@ -126,34 +155,32 @@ async def conversation_audio(audio: UploadFile):
     """
     End-to-end pipeline for audio-to-audio conversation.
     """
-    # Step 1: Convert Speech to Text
-    stt_result = voice_to_text(audio)
-    if not stt_result["success"]:
-        return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-
-    user_input = stt_result["text"]
-    print(f"User said: {user_input}")
-
-    # Step 2: Generate Text Response
     try:
-        # Stream the response from the LLaMA model
+        # Step 1: Convert Speech to Text
+        wav_audio = await convert_to_wav(audio)  
+        stt_result = voice_to_text(wav_audio)
+        if not stt_result["success"]:
+            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
+
+        user_input = stt_result["text"]
+        print(f"User said: {user_input}")
+
+        # Step 2: Generate Text Response
         response_text = ""
-        async for chunk in stream_generation(user_input, tokenizer, model):
-            data = json.loads(chunk.split("data: ")[1].strip())
-            response_text = data["response"]
-            if data["is_final"]:
-                break
-        print(f"Generated response: {response_text}")
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        async for chunk in chatbot.process_input("default_user", user_input):
+            response_text = chunk
 
-    # Step 3: Convert Text Response to Speech
-    try:
+        print(f"Generated response: {response_text}")
+
+        # Step 3: Convert Text Response to Speech
         output_filename = "response.mp3"
         text_to_speech(response_text, filename=output_filename)
+
+        # Step 4: Return the audio file generated
         return JSONResponse(content={"message": "Conversation completed", "audio_file": output_filename})
+
     except Exception as e:
-        return JSONResponse(content={"error": f"Text-to-Speech failed: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn

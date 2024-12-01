@@ -3,11 +3,23 @@ export async function sendAudioToBackend(audioBlob) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
 
-  const response = await fetch(url, { method: "POST", body: formData });
-  if (!response.ok) throw new Error("Failed to process audio");
+  try {
+    const response = await fetch(url, { method: "POST", body: formData });
 
-  const data = await response.json();
-  return data.text;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to process audio: ${response.statusText} - ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    return data.text;
+  } catch (error) {
+    console.error("Error:", error);
+    alert(`Error: ${error.message}`);
+    throw error;
+  }
 }
 
 export async function playAudioMessage(text) {

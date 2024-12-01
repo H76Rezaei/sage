@@ -5,20 +5,16 @@ from gtts import gTTS
 import os
 from playsound import playsound
 
+
 def voice_to_text(audio: UploadFile):
     """
     Convert audio to text using SpeechRecognition.
     """
     recognizer = sr.Recognizer()
-    
-    # Read audio data from UploadFile
-    audio_data = audio.file.read()
-    
-    # Convert byte data to AudioFile
-    audio_file = BytesIO(audio_data)
-    
+
+    # Read audio data from UploadFile directly
     try:
-        with sr.AudioFile(audio_file) as source:
+        with sr.AudioFile(audio.file) as source:
             print("Recognizing speech...")
             audio_recorded = recognizer.record(source)
             text = recognizer.recognize_google(audio_recorded)
@@ -27,17 +23,24 @@ def voice_to_text(audio: UploadFile):
         return {"success": False, "error": "Could not understand the audio."}
     except sr.RequestError as e:
         return {"success": False, "error": f"Could not request results from Google Speech Recognition service; {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
-# Function to convert text to speech
-def text_to_speech(text, filename='response.mp3'):
+
+def text_to_speech(text, filename='response.mp3', play_sound=False):
     """
     Convert text to speech and save as an MP3 file.
+    Optionally, play the sound after saving.
     """
-    tts = gTTS(text=text, lang='en')
-    tts.save(filename)
-    
-    # Optionally, play the sound if needed   
     try:
-        playsound(filename)
+        tts = gTTS(text=text, lang='en')
+        tts.save(filename)
+        
+        # Optionally, play the sound if needed
+        if play_sound:
+            try:
+                playsound(filename)
+            except Exception as e:
+                print(f"Error playing sound: {e}")
     except Exception as e:
-        print(f"Error playing sound: {e}")
+        print(f"Error converting text to speech: {e}")

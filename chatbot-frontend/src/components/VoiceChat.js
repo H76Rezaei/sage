@@ -7,25 +7,35 @@ const VoiceChat = ({
   sendAudioToBackend,
   playAudioMessage,
 }) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const [chatHistory, setChatHistory] = useState([]);
+  const [isRecording, setIsRecording] = useState(false); // State to track recording status
+  const mediaRecorderRef = useRef(null); // Ref to hold the media recorder instance
+  const [chatHistory, setChatHistory] = useState([]); // State to store the chat history (messages or audio)
 
+  // Function to start recording audio when the user clicks the "Start Recording" button
   const startRecording = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
+        // Request audio stream from the user's microphone
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
+
+        // Create a new MediaRecorder instance to record the audio
         const mediaRecorder = new MediaRecorder(stream);
 
+        // Define what happens when data is available (audio chunk is recorded)
         mediaRecorder.ondataavailable = handleDataAvailable;
+
+        // Define what happens when recording stops
         mediaRecorder.onstop = handleStop;
 
+        // Save the media recorder instance for later use
         mediaRecorderRef.current = mediaRecorder;
+
+        // Start recording
         mediaRecorder.start();
 
+        // Update state to reflect that the recording has started
         setIsRecording(true);
       } catch (err) {
         console.error("Error accessing audio devices:", err);
@@ -33,6 +43,7 @@ const VoiceChat = ({
     }
   };
 
+  // Function to stop recording when the user clicks the "Stop Recording" button
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
@@ -40,71 +51,65 @@ const VoiceChat = ({
     setIsRecording(false);
   };
 
-  const handleDataAvailable = async (event) => {
+  // Function to handle data when recording stops (audio chunk is available)
+  const handleDataAvailable = (event) => {
     if (event.data.size > 0) {
-      const chunk = event.data;
-      chunksRef.current.push(chunk);
-      await sendChunkToAPI(chunk);
-    }
-  };
+      const audioBlob = new Blob([event.data], { type: "audio/webm" }); // Send the raw format, e.g., webm
+      const audioUrl = URL.createObjectURL(audioBlob);
 
-  const handleStop = () => {
-    const audioBlob = new Blob(chunksRef.current, { type: "audio/wav" });
-    const audioUrl = URL.createObjectURL(audioBlob);
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "audio", sender: "user", content: audioUrl },
+      ]);
 
-    setChatHistory((prev) => [
-      ...prev,
-      { type: "audio", sender: "user", content: audioUrl },
-    ]);
-
-    sendAudioToBackend(audioBlob)
-      .then(async (response) => {
-        if (response && response.data) {
-          const botAudioUrl = response.data.audioUrl;
+      // Send the raw audio blob (no conversion) to the backend
+      sendAudioToBackend(audioBlob)
+        .then(async (response) => {
+          if (response && response.data) {
+            const botAudioUrl = response.data.audioUrl;
+            setChatHistory((prev) => [
+              ...prev,
+              { type: "audio", sender: "bot", content: botAudioUrl },
+            ]);
+            await playAudioMessage(botAudioUrl);
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending audio to the backend:", error);
           setChatHistory((prev) => [
             ...prev,
-            { type: "audio", sender: "bot", content: botAudioUrl },
+            {
+              type: "text",
+              sender: "bot",
+              content: "Error: Unable to process the audio.",
+            },
           ]);
-
-          await playAudioMessage(botAudioUrl);
-        }
-      })
-      .catch((error) => {
-        console.error("Error sending audio to the backend:", error);
-        setChatHistory((prev) => [
-          ...prev,
-          {
-            type: "text",
-            sender: "bot",
-            content: "Error: Unable to process the audio.",
-          },
-        ]);
-      });
-
-    chunksRef.current = [];
+        });
+    }
   };
 
-  const sendChunkToAPI = async (chunk) => {
-    const formData = new FormData();
-    formData.append("audio", chunk, `chunk-${Date.now()}.webm`);
+  // Function to handle the stop of the recording (no specific logic here yet)
+  const handleStop = () => {
+    // Reset logic can go here if needed
+  };
 
-    try {
-      const response = await fetch("/api/upload-audio-chunk", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload audio chunk");
-      }
-    } catch (error) {
-      console.error("Error uploading audio chunk:", error);
-    }
+  // Utility function to convert Blob to WAV format (if necessary)
+  const convertBlobToWav = (audioBlob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const arrayBuffer = reader.result;
+        const wavBlob = new Blob([arrayBuffer], { type: "audio/wav" });
+        resolve(wavBlob); // Return the converted WAV blob
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsArrayBuffer(audioBlob); // Read the audio as an array buffer
+    });
   };
 
   return (
     <div className="voice-chat-container">
-      {/* Header */}
+      {/* Header Section */}
       <div className="voice-chat-header">
         <button className="back-button" onClick={() => onSelectOption(null)}>
           <ArrowLeft />
@@ -112,7 +117,7 @@ const VoiceChat = ({
         <h1>Voice Chat</h1>
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat History Section */}
       <div className="messages-container">
         {chatHistory.map((msg, index) => (
           <div
@@ -129,7 +134,7 @@ const VoiceChat = ({
           </div>
         ))}
 
-        {/* Animation when recording */}
+        {/* Display an animation when recording */}
         {isRecording && (
           <div className="listening-indicator">
             <div className="listening-text">Listening...</div>
