@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
-import { ArrowLeft, Mic, MicOff } from "lucide-react"; // افزودن آیکون‌های میکروفون
-import "./VoiceChat.css"; // استایل‌هایی که برای این کامپوننت استفاده می‌شود
+import { ArrowLeft, Mic, MicOff } from "lucide-react";
+import "./VoiceChat.css";
 
 const VoiceChat = ({
   onSelectOption,
@@ -12,7 +12,6 @@ const VoiceChat = ({
   const chunksRef = useRef([]);
   const [chatHistory, setChatHistory] = useState([]);
 
-  // شروع ضبط
   const startRecording = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
@@ -21,47 +20,43 @@ const VoiceChat = ({
         });
         const mediaRecorder = new MediaRecorder(stream);
 
-        mediaRecorder.ondataavailable = handleDataAvailable; // ذخیره داده‌های صوتی
-        mediaRecorder.onstop = handleStop; // هنگامی که ضبط متوقف شد
+        mediaRecorder.ondataavailable = handleDataAvailable;
+        mediaRecorder.onstop = handleStop;
 
         mediaRecorderRef.current = mediaRecorder;
-        mediaRecorder.start(); // ضبط شروع می‌شود
+        mediaRecorder.start();
 
-        setIsRecording(true); // وضعیت ضبط فعال می‌شود
+        setIsRecording(true);
       } catch (err) {
         console.error("Error accessing audio devices:", err);
       }
     }
   };
 
-  // توقف ضبط
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop(); // ضبط متوقف می‌شود
+      mediaRecorderRef.current.stop();
     }
-    setIsRecording(false); // وضعیت ضبط غیرفعال می‌شود
+    setIsRecording(false);
   };
 
-  // مدیریت داده‌های صوتی
   const handleDataAvailable = async (event) => {
     if (event.data.size > 0) {
       const chunk = event.data;
-      chunksRef.current.push(chunk); // ذخیره قطعات داده‌های صوتی
-      await sendChunkToAPI(chunk); // ارسال قطعات به API
+      chunksRef.current.push(chunk);
+      await sendChunkToAPI(chunk);
     }
   };
 
-  // مدیریت زمانی که ضبط متوقف می‌شود
   const handleStop = () => {
     const audioBlob = new Blob(chunksRef.current, { type: "audio/wav" });
-    const audioUrl = URL.createObjectURL(audioBlob); // تبدیل داده صوتی به URL
+    const audioUrl = URL.createObjectURL(audioBlob);
 
     setChatHistory((prev) => [
       ...prev,
       { type: "audio", sender: "user", content: audioUrl },
     ]);
 
-    // ارسال داده صوتی به سرور
     sendAudioToBackend(audioBlob)
       .then(async (response) => {
         if (response && response.data) {
@@ -71,7 +66,6 @@ const VoiceChat = ({
             { type: "audio", sender: "bot", content: botAudioUrl },
           ]);
 
-          // پخش پیام صوتی
           await playAudioMessage(botAudioUrl);
         }
       })
@@ -87,10 +81,9 @@ const VoiceChat = ({
         ]);
       });
 
-    chunksRef.current = []; // پاک کردن قطعات صوتی پس از توقف ضبط
+    chunksRef.current = [];
   };
 
-  // ارسال قطعه صوتی به API
   const sendChunkToAPI = async (chunk) => {
     const formData = new FormData();
     formData.append("audio", chunk, `chunk-${Date.now()}.webm`);
