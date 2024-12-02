@@ -65,14 +65,18 @@ const VoiceChat = ({
       // Send the raw audio blob to the conversation-audio endpoint
       sendAudioToConversationEndpoint(audioBlob)
         .then(async (response) => {
+          // Create a URL for the audio blob returned from the backend
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+
           // Update chat history with the bot's audio response
           setChatHistory((prev) => [
             ...prev,
-            { type: "audio", sender: "bot", content: response.audioUrl },
+            { type: "audio", sender: "bot", content: audioUrl },
           ]);
 
-          // Optionally, play the bot's response as audio
-          const audio = new Audio(response.audioUrl);
+          // Play the bot's response as audio
+          const audio = new Audio(audioUrl);
           audio.play().catch(error => console.error("Audio playback error:", error));
         })
         .catch((error) => {
@@ -121,7 +125,7 @@ const VoiceChat = ({
       throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
     }
 
-    return await response.json();
+    return response; // Return the response directly to handle as a blob
   }
 
   return (

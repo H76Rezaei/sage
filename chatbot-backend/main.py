@@ -190,16 +190,20 @@ async def conversation_audio(audio: UploadFile):
         # Step 2: Generate Text Response
         response_text = ""
         async for chunk in chatbot.process_input("default_user", user_input):
-            response_text = chunk
+            response_text += chunk
 
         print(f"Generated response: {response_text}")
+
+        # Ensure response_text is not empty
+        if not response_text.strip():
+            raise ValueError("No text to speak")
 
         # Step 3: Convert Text Response to Speech
         output_filename = "response.mp3"
         text_to_speech(response_text, filename=output_filename)
 
         # Step 4: Return the audio file generated
-        return JSONResponse(content={"message": "Conversation completed", "audio_file": output_filename})
+        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
