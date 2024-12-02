@@ -35,7 +35,14 @@ def text_to_speech(text, filename='response.mp3', play_sound=False):
     try:
         tts = gTTS(text=text, lang='en')
         tts.save(filename)
-        
+        print(f"Audio file saved as: {filename}")  # Log the file path
+
+        # Check if the file exists
+        if os.path.exists(filename):
+            print(f"Audio file {filename} exists.")
+        else:
+            print(f"Audio file {filename} does not exist.")
+
         # Optionally, play the sound if needed
         if play_sound:
             try:

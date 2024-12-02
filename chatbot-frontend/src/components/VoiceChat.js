@@ -54,7 +54,7 @@ const VoiceChat = ({
   // Function to handle data when recording stops (audio chunk is available)
   const handleDataAvailable = (event) => {
     if (event.data.size > 0) {
-      const audioBlob = new Blob([event.data], { type: "audio/webm" }); // Send the raw format, e.g., webm
+      const audioBlob = new Blob([event.data], { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(audioBlob);
 
       setChatHistory((prev) => [
@@ -62,17 +62,17 @@ const VoiceChat = ({
         { type: "audio", sender: "user", content: audioUrl },
       ]);
 
-      // Send the raw audio blob (no conversion) to the backend
+      // Send the raw audio blob to the backend
       sendAudioToBackend(audioBlob)
-        .then(async (response) => {
-          if (response && response.data) {
-            const botAudioUrl = response.data.audioUrl;
-            setChatHistory((prev) => [
-              ...prev,
-              { type: "audio", sender: "bot", content: botAudioUrl },
-            ]);
-            await playAudioMessage(botAudioUrl);
-          }
+        .then(async (responseText) => {
+          // Update chat history with the bot's text response
+          setChatHistory((prev) => [
+            ...prev,
+            { type: "text", sender: "bot", content: responseText },
+          ]);
+
+          // Optionally, play the bot's response as audio
+          await playAudioMessage(responseText);
         })
         .catch((error) => {
           console.error("Error sending audio to the backend:", error);

@@ -35,6 +35,7 @@ export async function playAudioMessage(text) {
 
   const blob = await response.blob();
   const audioUrl = URL.createObjectURL(blob);
+  console.log("Audio URL:", audioUrl);
   const audio = new Audio(audioUrl);
-  audio.play();
+  audio.play().catch(error => console.error("Audio playback error:", error));
 }

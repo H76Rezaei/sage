@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from llama.ChatBotClass import DigitalCompanion
@@ -158,7 +158,7 @@ async def voice_to_text_endpoint(audio: UploadFile = File(...)):
 @app.post("/text-to-speech")
 async def text_to_speech_endpoint(request: Request):
     """
-    Endpoint to convert text to speech.
+    Endpoint to convert text to speech and return the audio file.
     """
     data = await request.json()
     text = data.get("text")
@@ -166,8 +166,9 @@ async def text_to_speech_endpoint(request: Request):
         return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
 
     try:
-        text_to_speech(text)
-        return JSONResponse(content={"message": "Text converted to speech successfully"})
+        output_filename = 'response.mp3'
+        text_to_speech(text, filename=output_filename)
+        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
