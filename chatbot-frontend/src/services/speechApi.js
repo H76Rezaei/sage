@@ -14,6 +14,7 @@ export async function sendAudioToBackend(audioBlob) {
     }
 
     const data = await response.json();
+    console.log("Received text from backend:", data.text);
     return data.text;
   } catch (error) {
     console.error("Error:", error);

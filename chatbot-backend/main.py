@@ -140,9 +140,12 @@ async def voice_to_text_endpoint(audio: UploadFile = File(...)):
         # Convert audio to WAV format first
         wav_audio = await convert_to_wav(audio)
 
-        # Pass the WAV audio to voice_to_text function (You can integrate your STT model here)
+        # Pass the WAV audio to voice_to_text function
         stt_result = voice_to_text(wav_audio)
         
+        # Log the result of the speech-to-text conversion
+        print(f"STT Result: {stt_result}")
+
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
 
