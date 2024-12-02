@@ -76,8 +76,11 @@ const VoiceChat = ({
           ]);
 
           // Play the bot's response as audio
+          // comment this part of the code to stop the audio from automatically playing
           const audio = new Audio(audioUrl);
+          //comment this line too
           audio.play().catch(error => console.error("Audio playback error:", error));
+          //end of comment
         })
         .catch((error) => {
           console.error("Error sending audio to the backend:", error);
