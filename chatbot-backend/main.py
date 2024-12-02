@@ -82,15 +82,33 @@ app.add_middleware(
 # Define the function to convert audio to WAV using ffmpeg
 async def convert_to_wav(audio: UploadFile):
     try:
-        audio_data = await audio.read() 
-        input_audio = BytesIO(audio_data)  
-        output_audio = BytesIO()  
+        audio_data = await audio.read()
+        input_audio = BytesIO(audio_data)
+        output_audio = BytesIO()
 
         # Use ffmpeg to convert the input audio to WAV format
-        ffmpeg.input('pipe:0').output('pipe:1', format='wav').run(input=input_audio, output=output_audio)
+        process = (
+            ffmpeg
+            .input('pipe:0')
+            .output('pipe:1', format='wav')
+            .run_async(pipe_stdin=True, pipe_stdout=True, pipe_stderr=True)
+        )
 
-        output_audio.seek(0)  
-        return output_audio  
+        # Write the input audio data to the process
+        stdout, stderr = process.communicate(input=input_audio.read())
+
+        # Log any errors from ffmpeg
+        if stderr:
+            print(f"ffmpeg error: {stderr.decode()}")
+
+        # Write the output audio data to the BytesIO object
+        output_audio.write(stdout)
+        output_audio.seek(0)
+
+        # Log the size of the output audio
+        print(f"Converted audio size: {output_audio.getbuffer().nbytes} bytes")
+
+        return output_audio
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
 

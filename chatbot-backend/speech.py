@@ -6,15 +6,15 @@ import os
 from playsound import playsound
 
 
-def voice_to_text(audio: UploadFile):
+def voice_to_text(audio_data: BytesIO):
     """
     Convert audio to text using SpeechRecognition.
     """
     recognizer = sr.Recognizer()
 
-    # Read audio data from UploadFile directly
+    # Use the BytesIO object directly
     try:
-        with sr.AudioFile(audio.file) as source:
+        with sr.AudioFile(audio_data) as source:
             print("Recognizing speech...")
             audio_recorded = recognizer.record(source)
             text = recognizer.recognize_google(audio_recorded)
