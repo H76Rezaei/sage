@@ -62,17 +62,18 @@ const VoiceChat = ({
         { type: "audio", sender: "user", content: audioUrl },
       ]);
 
-      // Send the raw audio blob to the backend
-      sendAudioToBackend(audioBlob)
-        .then(async (responseText) => {
-          // Update chat history with the bot's text response
+      // Send the raw audio blob to the conversation-audio endpoint
+      sendAudioToConversationEndpoint(audioBlob)
+        .then(async (response) => {
+          // Update chat history with the bot's audio response
           setChatHistory((prev) => [
             ...prev,
-            { type: "text", sender: "bot", content: responseText },
+            { type: "audio", sender: "bot", content: response.audioUrl },
           ]);
 
           // Optionally, play the bot's response as audio
-          await playAudioMessage(responseText);
+          const audio = new Audio(response.audioUrl);
+          audio.play().catch(error => console.error("Audio playback error:", error));
         })
         .catch((error) => {
           console.error("Error sending audio to the backend:", error);
@@ -106,6 +107,22 @@ const VoiceChat = ({
       reader.readAsArrayBuffer(audioBlob); // Read the audio as an array buffer
     });
   };
+
+  // Function to send audio to the conversation-audio endpoint
+  async function sendAudioToConversationEndpoint(audioBlob) {
+    const url = "http://127.0.0.1:8000/conversation-audio";
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.wav");
+
+    const response = await fetch(url, { method: "POST", body: formData });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json();
+  }
 
   return (
     <div className="voice-chat-container">
