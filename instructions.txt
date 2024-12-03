@@ -1,3 +1,46 @@
+Installing ffmpeg:
+install ffmpeg from their local website 
+
+Windows:
+- Go to the FFmpeg download page.
+- Under "Get packages & executable files", click on the Windows logo.
+- Choose a build from a provider like gyan.dev or BtbN. For example, you can use Gyan.dev.
+- Extract the Files:
+Download the "essentials" or "full" build ZIP file.
+Extract the contents to a folder, e.g., C:\ffmpeg.
+
+Add FFmpeg to PATH:
+
+Open the Start Menu, search for "Environment Variables", and select "Edit the system environment variables".
+In the System Properties window, click on "Environment Variables".
+Under "System variables", find and select the "Path" variable, then click "Edit".
+Click "New" and add the path to the bin directory of your FFmpeg installation, e.g., C:\ffmpeg\bin.
+Click "OK" to close all dialog boxes.
+
+Verify Installation:
+Open a new Command Prompt window.
+Type ffmpeg -version and press Enter.
+You should see version information for FFmpeg, confirming it's installed correctly.
+
+
+macOS:
+Install Homebrew (if not already installed):
+Open Terminal and run the following command to install Homebrew:
+     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+Install FFmpeg:
+Run the following command in Terminal:
+     brew install ffmpeg
+ 
+Verify Installation:
+Type ffmpeg -version in Terminal and press Enter.
+You should see version information for FFmpeg.
+
+
+
+
+
+
 Python virtual environment setup:
 - Command promt: python -m venv sage/chatbot-backend/venv
                  source sage/chatbot-backend/venv/bin/activate
@@ -18,10 +61,10 @@ For running the frontend:
 
 
 
-For running the Flask server (Backend):
+For running the FastAPI server (Backend):
 - Make sure you have all python dependencies
 - Create virtual environment if needed
-- launch the python main.py file (to activate flask server)
+- launch the python main.py file (to activate FastAPI server)
 - if you're on winodws you can use the batch script by
   + navigating to the chatbot-frontend inside the command prompt
   + typing npm run start-backend

@@ -6,15 +6,15 @@ import os
 from playsound import playsound
 
 
-def voice_to_text(audio: UploadFile):
+def voice_to_text(audio_data: BytesIO):
     """
     Convert audio to text using SpeechRecognition.
     """
     recognizer = sr.Recognizer()
 
-    # Read audio data from UploadFile directly
+    # Use the BytesIO object directly
     try:
-        with sr.AudioFile(audio.file) as source:
+        with sr.AudioFile(audio_data) as source:
             print("Recognizing speech...")
             audio_recorded = recognizer.record(source)
             text = recognizer.recognize_google(audio_recorded)
@@ -35,7 +35,14 @@ def text_to_speech(text, filename='response.mp3', play_sound=False):
     try:
         tts = gTTS(text=text, lang='en')
         tts.save(filename)
-        
+        print(f"Audio file saved as: {filename}")  # Log the file path
+
+        # Check if the file exists
+        if os.path.exists(filename):
+            print(f"Audio file {filename} exists.")
+        else:
+            print(f"Audio file {filename} does not exist.")
+
         # Optionally, play the sound if needed
         if play_sound:
             try:

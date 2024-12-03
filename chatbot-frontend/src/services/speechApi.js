@@ -14,6 +14,7 @@ export async function sendAudioToBackend(audioBlob) {
     }
 
     const data = await response.json();
+    console.log("Received text from backend:", data.text);
     return data.text;
   } catch (error) {
     console.error("Error:", error);
@@ -34,6 +35,14 @@ export async function playAudioMessage(text) {
 
   const blob = await response.blob();
   const audioUrl = URL.createObjectURL(blob);
+  console.log("Audio URL:", audioUrl);
+
+  //automatically play the audio
+  //uncomment this part to automatically play the audio
   const audio = new Audio(audioUrl);
-  audio.play();
+  audio.play().catch(error => console.error("Audio playback error:", error));
+
+
+  //no need for this as audio is currently playing automatically
+  //return audioUrl;
 }

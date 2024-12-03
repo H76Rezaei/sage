@@ -54,7 +54,7 @@ const VoiceChat = ({
   // Function to handle data when recording stops (audio chunk is available)
   const handleDataAvailable = (event) => {
     if (event.data.size > 0) {
-      const audioBlob = new Blob([event.data], { type: "audio/webm" }); // Send the raw format, e.g., webm
+      const audioBlob = new Blob([event.data], { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(audioBlob);
 
       setChatHistory((prev) => [
@@ -62,17 +62,25 @@ const VoiceChat = ({
         { type: "audio", sender: "user", content: audioUrl },
       ]);
 
-      // Send the raw audio blob (no conversion) to the backend
-      sendAudioToBackend(audioBlob)
+      // Send the raw audio blob to the conversation-audio endpoint
+      sendAudioToConversationEndpoint(audioBlob)
         .then(async (response) => {
-          if (response && response.data) {
-            const botAudioUrl = response.data.audioUrl;
-            setChatHistory((prev) => [
-              ...prev,
-              { type: "audio", sender: "bot", content: botAudioUrl },
-            ]);
-            await playAudioMessage(botAudioUrl);
-          }
+          // Create a URL for the audio blob returned from the backend
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+
+          // Update chat history with the bot's audio response
+          setChatHistory((prev) => [
+            ...prev,
+            { type: "audio", sender: "bot", content: audioUrl },
+          ]);
+
+          // Play the bot's response as audio
+          // comment this part of the code to stop the audio from automatically playing
+          const audio = new Audio(audioUrl);
+          //comment this line too
+          audio.play().catch(error => console.error("Audio playback error:", error));
+          //end of comment
         })
         .catch((error) => {
           console.error("Error sending audio to the backend:", error);
@@ -106,6 +114,22 @@ const VoiceChat = ({
       reader.readAsArrayBuffer(audioBlob); // Read the audio as an array buffer
     });
   };
+
+  // Function to send audio to the conversation-audio endpoint
+  async function sendAudioToConversationEndpoint(audioBlob) {
+    const url = "http://127.0.0.1:8000/conversation-audio";
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.wav");
+
+    const response = await fetch(url, { method: "POST", body: formData });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
+    }
+
+    return response; // Return the response directly to handle as a blob
+  }
 
   return (
     <div className="voice-chat-container">

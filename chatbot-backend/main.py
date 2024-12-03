@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from llama.ChatBotClass import DigitalCompanion
@@ -82,15 +82,33 @@ app.add_middleware(
 # Define the function to convert audio to WAV using ffmpeg
 async def convert_to_wav(audio: UploadFile):
     try:
-        audio_data = await audio.read() 
-        input_audio = BytesIO(audio_data)  
-        output_audio = BytesIO()  
+        audio_data = await audio.read()
+        input_audio = BytesIO(audio_data)
+        output_audio = BytesIO()
 
         # Use ffmpeg to convert the input audio to WAV format
-        ffmpeg.input('pipe:0').output('pipe:1', format='wav').run(input=input_audio, output=output_audio)
+        process = (
+            ffmpeg
+            .input('pipe:0')
+            .output('pipe:1', format='wav')
+            .run_async(pipe_stdin=True, pipe_stdout=True, pipe_stderr=True)
+        )
 
-        output_audio.seek(0)  
-        return output_audio  
+        # Write the input audio data to the process
+        stdout, stderr = process.communicate(input=input_audio.read())
+
+        # Log any errors from ffmpeg
+        if stderr:
+            print(f"ffmpeg error: {stderr.decode()}")
+
+        # Write the output audio data to the BytesIO object
+        output_audio.write(stdout)
+        output_audio.seek(0)
+
+        # Log the size of the output audio
+        print(f"Converted audio size: {output_audio.getbuffer().nbytes} bytes")
+
+        return output_audio
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
 
@@ -122,9 +140,12 @@ async def voice_to_text_endpoint(audio: UploadFile = File(...)):
         # Convert audio to WAV format first
         wav_audio = await convert_to_wav(audio)
 
-        # Pass the WAV audio to voice_to_text function (You can integrate your STT model here)
+        # Pass the WAV audio to voice_to_text function
         stt_result = voice_to_text(wav_audio)
         
+        # Log the result of the speech-to-text conversion
+        print(f"STT Result: {stt_result}")
+
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
 
@@ -137,7 +158,7 @@ async def voice_to_text_endpoint(audio: UploadFile = File(...)):
 @app.post("/text-to-speech")
 async def text_to_speech_endpoint(request: Request):
     """
-    Endpoint to convert text to speech.
+    Endpoint to convert text to speech and return the audio file.
     """
     data = await request.json()
     text = data.get("text")
@@ -145,8 +166,9 @@ async def text_to_speech_endpoint(request: Request):
         return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
 
     try:
-        text_to_speech(text)
-        return JSONResponse(content={"message": "Text converted to speech successfully"})
+        output_filename = 'response.mp3'
+        text_to_speech(text, filename=output_filename)
+        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -168,16 +190,20 @@ async def conversation_audio(audio: UploadFile):
         # Step 2: Generate Text Response
         response_text = ""
         async for chunk in chatbot.process_input("default_user", user_input):
-            response_text = chunk
+            response_text += chunk
 
         print(f"Generated response: {response_text}")
+
+        # Ensure response_text is not empty
+        if not response_text.strip():
+            raise ValueError("No text to speak")
 
         # Step 3: Convert Text Response to Speech
         output_filename = "response.mp3"
         text_to_speech(response_text, filename=output_filename)
 
         # Step 4: Return the audio file generated
-        return JSONResponse(content={"message": "Conversation completed", "audio_file": output_filename})
+        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
