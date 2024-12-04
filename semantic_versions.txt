@@ -1,6 +1,5 @@
-1.0.0: BlenderBot, no real time response streaming, no GPU usage, no emotion tagging
-1.1.0: BlenderBot, real time response streaming, GPU usage, no emotion tagging
-1.2.0: BlenderBot, real time response streaming, GPU usage, emotion tagging
+1.0.0: BlenderBot, no real time response streaming, no GPU usage, basic emotion tagging (Vader: positive, negative neutral)
+
 
 2.0.0: LLama, real time response streaming, no GPU usage, remote from hugging-face cloud, system prompt, no emotion tagging, no memory
 2.1.0: LLama, real time response streaming, GPU usage, remote from hugging-face cloud, system prompt, no emotion tagging, no memory
