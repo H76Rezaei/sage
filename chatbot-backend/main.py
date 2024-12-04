@@ -1,3 +1,4 @@
+#semantic_version 3.3.0
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
