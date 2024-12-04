@@ -1,0 +1,18 @@
+1.0.0: BlenderBot, no real time response streaming, no GPU usage, no emotion tagging
+1.1.0: BlenderBot, real time response streaming, GPU usage, no emotion tagging
+1.2.0: BlenderBot, real time response streaming, GPU usage, emotion tagging
+
+2.0.0: LLama, real time response streaming, no GPU usage, remote from hugging-face cloud, system prompt, no emotion tagging, no memory
+2.1.0: LLama, real time response streaming, GPU usage, remote from hugging-face cloud, system prompt, no emotion tagging, no memory
+2.2.0: LLama, real time response streaming, GPU usage, remote from hugging-face cloud, system prompt, emotion tagging, no memory
+2.3.0: LLama, real time response streaming, GPU usage, remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory
+2.4.0: LLama, real time response streaming, CPU only (test speed) , remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory
+
+3.1.0: LLama+Ollama, no real time response streaming, GPU usage, locally running, system prompt, no emotion tagging, no emotion prompt, memory
+3.2.0: LLama+Ollama, real time response streaming, CPU only (test speed), locally running, system prompt,  emotion tagging,  emotion prompt, memory
+3.3.0: LLama+Ollama, real time response streaming, GPU usage, locally running, system prompt,  emotion tagging,  emotion prompt, memory
+3.3.1: version 3.3.0 but with different parameters and prompts 
+3.3.2: version 3.3.0 but with different parameters and prompts 
+.
+.
+3.3.n: however many I will be able to test 
