@@ -18,7 +18,7 @@
 3.2.x-z: however many I will be able to test 
 
 
-
+3.3.0: Most recent version, includes basic speech synthesis
 
 
 Version locations:
