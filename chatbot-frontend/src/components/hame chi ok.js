@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import Lottie from 'react-lottie';
-import listeningAnimation from "./Animation.json";
+import listeningAnimation from "./Animation1.json";
 import "./VoiceChat.css";
 
 const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setChatHistory }) => {
