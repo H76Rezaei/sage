@@ -37,6 +37,7 @@ function App() {
         if (selectedOption === 'voice') {
             return (
                 <VoiceChat 
+                    key={selectedOption} // Force unmount when switching views
                     onSelectOption={handleSelectOption} 
                     sendAudioToBackend={sendAudioToBackend} 
                     playAudioMessage={playAudioMessage} 

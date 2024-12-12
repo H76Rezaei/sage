@@ -97,6 +97,13 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
         setStatusText('Listening...'); // Update status text to listening
       } catch (err) {
         console.error("Error accessing audio devices:", err);
+        if (!stopFlagRef.current) {
+          setChatHistory((prev) => [
+            ...prev,
+            { type: "text", sender: "bot", content: "Error: Unable to access audio devices." },
+          ]);
+          onSelectOption('voiceHistory');
+        }
       }
     }
   };
@@ -109,18 +116,38 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
   };
 
   const handleStopButton = () => {
-    // Stop recording and clear all timeouts
-    stopRecordingAndProcess();
-    clearTimeout(silenceTimeoutRef.current);
-    silenceTimeoutRef.current = null;
+    stopFlagRef.current = true;  // Set stop flag to prevent new recordings
+
+    // Stop recording and clean up media recorder
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      mediaRecorderRef.current = null;
+    }
+
+    // Clean up audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
 
     // Stop any ongoing bot audio
     if (botAudioRef.current) {
       botAudioRef.current.pause();
       botAudioRef.current.currentTime = 0;
+      botAudioRef.current = null;
     }
 
-    // Reset status text
+    // Clear all timeouts and flags
+    clearTimeout(silenceTimeoutRef.current);
+    silenceTimeoutRef.current = null;
+    userSpeakingRef.current = false;
+    silenceDetectionStartedRef.current = false;
+
+    // Reset states
+    setIsRecording(false);
     setStatusText('Stopped');
     setInterruptMessage('');
 
@@ -128,12 +155,15 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
   };
 
   const handleDataAvailable = async (event) => {
+    // Don't process data if stop flag is set
+    if (stopFlagRef.current) return;
+
     if (event.data.size > 0) {
       const audioBlob = new Blob([event.data], { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Only process if the audio is meaningful
-      if (audioBlob.size > 1000) { // Adjust the size threshold as needed
+      // Only process if the audio is meaningful and stop flag is not set
+      if (audioBlob.size > 1000 && !stopFlagRef.current) {
         // Save user message
         setChatHistory((prev) => [
           ...prev,
@@ -148,6 +178,13 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
 
         try {
           const response = await sendAudioToConversationEndpoint(audioBlob);
+          
+          // Check stop flag again after getting response
+          if (stopFlagRef.current) {
+            // If stopped during processing, don't play or save response
+            return;
+          }
+
           const backendAudioBlob = await response.blob();
           const backendAudioUrl = URL.createObjectURL(backendAudioBlob);
 
@@ -157,36 +194,47 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
             { type: "audio", sender: "bot", content: backendAudioUrl },
           ]);
 
-          const botAudio = new Audio(backendAudioUrl);
-          botAudioRef.current = botAudio; // Store the bot's audio reference
-          botAudio.play()
-            .catch(error => {
-              console.error("Audio playback error:", error);
-              onSelectOption('voiceHistory');
-            });
+          // Only play if not stopped
+          if (!stopFlagRef.current) {
+            const botAudio = new Audio(backendAudioUrl);
+            botAudioRef.current = botAudio; // Store the bot's audio reference
+            botAudio.play()
+              .catch(error => {
+                console.error("Audio playback error:", error);
+                if (!stopFlagRef.current) {
+                  onSelectOption('voiceHistory');
+                }
+              });
 
-          // Show interrupt message when bot is responding
-          setStatusText('Bot is responding...');
-          setInterruptMessage('Start talking to interrupt.');
+            // Show interrupt message when bot is responding
+            setStatusText('Bot is responding...');
+            setInterruptMessage('Start talking to interrupt.');
 
-          // Restart recording after bot response
-          botAudio.onended = () => {
-            startRecording();
-            setStatusText('Listening...');
-            setInterruptMessage('');
-          };
+            // Restart recording after bot response
+            botAudio.onended = () => {
+              if (!stopFlagRef.current) {  // Only restart if not stopped
+                startRecording();
+                setStatusText('Listening...');
+                setInterruptMessage('');
+              }
+            };
+          }
         } catch (error) {
           console.error("Error sending audio to the backend:", error);
-          setChatHistory((prev) => [
-            ...prev,
-            { type: "text", sender: "bot", content: "Error: Unable to process the audio." },
-          ]);
-          onSelectOption('voiceHistory');
+          if (!stopFlagRef.current) {
+            setChatHistory((prev) => [
+              ...prev,
+              { type: "text", sender: "bot", content: "Error: Unable to process the audio." },
+            ]);
+            onSelectOption('voiceHistory');
+          }
         }
       }
 
-      // Restart recording immediately after processing
-      startRecording();
+      // Only restart recording if not stopped
+      if (!stopFlagRef.current) {
+        startRecording();
+      }
     }
   };
 
