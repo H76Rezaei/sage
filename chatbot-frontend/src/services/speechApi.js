@@ -1,7 +1,11 @@
-export async function sendAudioToBackend(audioBlob) {
+// api.js
+
+export async function sendAudioToBackend(audioBlob, gender) {
   const url = "http://127.0.0.1:8000/voice-to-text";
+
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
+  formData.append("gender", gender);
 
   try {
     const response = await fetch(url, { method: "POST", body: formData });
@@ -9,7 +13,7 @@ export async function sendAudioToBackend(audioBlob) {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Failed to process audio: ${response.statusText} - ${errorText}`
+        `Audio processing failed: ${response.statusText} - ${errorText}`
       );
     }
 
@@ -17,7 +21,7 @@ export async function sendAudioToBackend(audioBlob) {
     console.log("Received text from backend:", data.text);
     return data.text;
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Failed to send audio:", error);
     alert(`Error: ${error.message}`);
     throw error;
   }
@@ -33,17 +37,15 @@ export async function playAudioMessage(text, gender = "male") {
       body: JSON.stringify({ text, gender }),
     });
 
-    if (!response.ok) throw new Error("Failed to fetch audio response");
+    if (!response.ok) throw new Error("Audio response not received");
 
     const blob = await response.blob();
     const audioUrl = URL.createObjectURL(blob);
-    console.log("Audio URL:", audioUrl);
+    console.log("Audio playback source:", audioUrl);
 
     const audio = new Audio(audioUrl);
-    audio
-      .play()
-      .catch((error) => console.error("Audio playback error:", error));
+    audio.play().catch((err) => console.error("Audio playback error:", err));
   } catch (error) {
-    console.error("Failed to play audio message:", error);
+    console.error("Failed to play audio:", error);
   }
 }

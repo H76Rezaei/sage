@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import os
 from llama.ChatBotClass import DigitalCompanion
 #from llama.generation import stream_generation
 #from llama.model_manager import get_model_and_tokenizer
@@ -63,6 +64,11 @@ EMOTION_PROMPTS = {
 
 
 chatbot = DigitalCompanion(SYSTEM_PROMPT, EMOTION_PROMPTS)
+
+
+# Temporary Directory for Partial Audio Uploads
+PARTIAL_DIR = "partial_audio"
+os.makedirs(PARTIAL_DIR, exist_ok=True)
 
 #llama model and tokenizer
 #model, tokenizer = get_model_and_tokenizer()
@@ -130,30 +136,23 @@ async def conversation(request: Request):
         media_type="text/event-stream"
     )
 
-
-
 @app.post("/voice-to-text")
-async def voice_to_text_endpoint(audio: UploadFile = File(...)):
-    """
-    Endpoint to convert audio to text.
-    """
+async def voice_to_text_endpoint(audio_chunk: UploadFile = File(...), chunk_index: int = 0):
     try:
-        # Convert audio to WAV format first
-        wav_audio = await convert_to_wav(audio)
+        chunk_path = os.path.join(PARTIAL_DIR, f"chunk_{chunk_index}.wav")
+        with open(chunk_path, "wb") as f:
+            f.write(await audio_chunk.read())
+        print(f"Received audio chunk {chunk_index}")
 
-        # Pass the WAV audio to voice_to_text function
-        stt_result = voice_to_text(wav_audio)
-        
-        # Log the result of the speech-to-text conversion
-        print(f"STT Result: {stt_result}")
+        wav_audio = await convert_to_wav(audio_chunk)
+        result = voice_to_text(wav_audio)
 
-        if not stt_result["success"]:
-            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-
-        return JSONResponse(content={"text": stt_result["text"]})
-    
+        if result.get('success'):
+            return JSONResponse(content={'transcribed_text': result['text']})
+        else:
+            return JSONResponse(status_code=400, content={"error": result.get('error')})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing the audio: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Audio processing failed: {str(e)}")
 
     
 @app.post("/text-to-speech")
@@ -178,39 +177,34 @@ async def text_to_speech_endpoint(request: Request):
 
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
-    """
-    End-to-end pipeline for audio-to-audio conversation.
-    """
     try:
-        # Step 1: Convert Speech to Text
+        # Asynchronous conversion to WAV
         wav_audio = await convert_to_wav(audio)  
-        stt_result = voice_to_text(wav_audio)
+        stt_result = await voice_to_text(wav_audio)
+
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
 
         user_input = stt_result["text"]
         print(f"User said: {user_input}")
 
-        # Step 2: Generate Text Response
+        # Asynchronously generate chatbot response
         response_text = ""
         async for chunk in chatbot.process_input("default_user", user_input):
             response_text += chunk
 
-        print(f"Generated response: {response_text}")
-
-        # Ensure response_text is not empty
         if not response_text.strip():
             raise ValueError("No text to speak")
 
-        # Step 3: Convert Text Response to Speech
+        # Asynchronously convert text to speech
         output_filename = "response.mp3"
-        text_to_speech(response_text, filename=output_filename)
+        await text_to_speech(response_text, filename=output_filename)
 
-        # Step 4: Return the audio file generated
         return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
 
     except Exception as e:
-        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"error": f"Audio processing error: {str(e)}"}, status_code=500)
+
 
 if __name__ == "__main__":
     import uvicorn
