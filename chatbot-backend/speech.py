@@ -1,7 +1,7 @@
 import os
 from io import BytesIO
 from fastapi import UploadFile
-from gtts import gTTS
+from TTS.api import TTS
 from playsound import playsound
 import whisper
 
@@ -36,27 +36,19 @@ def voice_to_text(audio_data: BytesIO):
         return {"success": False, "error": f"An error occurred: {str(e)}"}
 
 
-def text_to_speech(text, filename='response.mp3', play_sound=False):
-    """
-    Convert text to speech and save as an MP3 file.
-    Optionally, play the sound after saving.
-    """
+def text_to_speech(text, filename='response_audio.mp3', play_sound=False):
     try:
-        tts = gTTS(text=text, lang='en')
-        tts.save(filename)
+        tts = TTS("tts_models/en/ljspeech/tacotron2-DDC")
+        
+        filepath = os.path.join(os.getcwd(), filename) 
 
-        print(f"Audio file saved as: {filename}")
+        tts.tts_to_file(text=text, file_path=filepath)
 
-        if os.path.exists(filename):
-            print(f"Audio file {filename} exists.")
+        if os.path.exists(filepath):
+            print(f"Audio file {filepath} exists.")
         else:
-            print(f"Audio file {filename} does not exist.")
+            print(f"{filepath} does not exist.")
 
-        if play_sound:
-            try:
-                playsound(filename)
-            except Exception as e:
-                print(f"Error playing sound: {e}")
     except Exception as e:
         print(f"Error converting text to speech: {e}")
 
