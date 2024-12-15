@@ -98,6 +98,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
       } catch (err) {
         console.error("Error accessing audio devices:", err);
         if (!stopFlagRef.current) {
+          cleanup();
           setChatHistory((prev) => [
             ...prev,
             { type: "text", sender: "bot", content: "Error: Unable to access audio devices." },
@@ -116,6 +117,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
   };
 
   const handleStopButton = () => {
+    cleanup();
+    onSelectOption('stop');
+  };
+
+  const cleanup = () => {
     stopFlagRef.current = true;  // Set stop flag to prevent new recordings
 
     // Stop recording and clean up media recorder
@@ -150,8 +156,6 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
     setIsRecording(false);
     setStatusText('Stopped');
     setInterruptMessage('');
-
-    onSelectOption('stop');
   };
 
   const handleDataAvailable = async (event) => {
@@ -222,6 +226,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
         } catch (error) {
           console.error("Error sending audio to the backend:", error);
           if (!stopFlagRef.current) {
+            cleanup();
             setChatHistory((prev) => [
               ...prev,
               { type: "text", sender: "bot", content: "Error: Unable to process the audio." },
