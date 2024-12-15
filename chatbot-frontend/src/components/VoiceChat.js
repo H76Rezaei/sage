@@ -7,35 +7,24 @@ const VoiceChat = ({
   sendAudioToBackend,
   playAudioMessage,
 }) => {
-  const [isRecording, setIsRecording] = useState(false); // State to track recording status
-  const mediaRecorderRef = useRef(null); // Ref to hold the media recorder instance
-  const [chatHistory, setChatHistory] = useState([]); // State to store the chat history (messages or audio)
+  const [isRecording, setIsRecording] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [selectedGender, setSelectedGender] = useState("male"); // State to track selected voice gender
+  const mediaRecorderRef = useRef(null);
 
-  // Function to start recording audio when the user clicks the "Start Recording" button
   const startRecording = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
-        // Request audio stream from the user's microphone
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
-
-        // Create a new MediaRecorder instance to record the audio
         const mediaRecorder = new MediaRecorder(stream);
 
-        // Define what happens when data is available (audio chunk is recorded)
         mediaRecorder.ondataavailable = handleDataAvailable;
-
-        // Define what happens when recording stops
         mediaRecorder.onstop = handleStop;
 
-        // Save the media recorder instance for later use
         mediaRecorderRef.current = mediaRecorder;
-
-        // Start recording
         mediaRecorder.start();
-
-        // Update state to reflect that the recording has started
         setIsRecording(true);
       } catch (err) {
         console.error("Error accessing audio devices:", err);
@@ -43,7 +32,6 @@ const VoiceChat = ({
     }
   };
 
-  // Function to stop recording when the user clicks the "Stop Recording" button
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
@@ -51,8 +39,7 @@ const VoiceChat = ({
     setIsRecording(false);
   };
 
-  // Function to handle data when recording stops (audio chunk is available)
-  const handleDataAvailable = (event) => {
+  const handleDataAvailable = async (event) => {
     if (event.data.size > 0) {
       const audioBlob = new Blob([event.data], { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -62,74 +49,61 @@ const VoiceChat = ({
         { type: "audio", sender: "user", content: audioUrl },
       ]);
 
-      // Send the raw audio blob to the conversation-audio endpoint
-      sendAudioToConversationEndpoint(audioBlob)
-        .then(async (response) => {
-          // Create a URL for the audio blob returned from the backend
-          const audioBlob = await response.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
+      try {
+        const response = await sendAudioToConversationEndpoint(
+          audioBlob,
+          selectedGender
+        );
 
-          // Update chat history with the bot's audio response
-          setChatHistory((prev) => [
-            ...prev,
-            { type: "audio", sender: "bot", content: audioUrl },
-          ]);
+        const backendAudioBlob = await response.blob();
+        const backendAudioUrl = URL.createObjectURL(backendAudioBlob);
 
-          // Play the bot's response as audio
-          // comment this part of the code to stop the audio from automatically playing
-          const audio = new Audio(audioUrl);
-          //comment this line too
-          audio.play().catch(error => console.error("Audio playback error:", error));
-          //end of comment
-        })
-        .catch((error) => {
-          console.error("Error sending audio to the backend:", error);
-          setChatHistory((prev) => [
-            ...prev,
-            {
-              type: "text",
-              sender: "bot",
-              content: "Error: Unable to process the audio.",
-            },
-          ]);
-        });
+        setChatHistory((prev) => [
+          ...prev,
+          { type: "audio", sender: "bot", content: backendAudioUrl },
+        ]);
+
+        // Automatically play audio response
+        const audio = new Audio(backendAudioUrl);
+        audio
+          .play()
+          .catch((error) => console.error("Audio playback error:", error));
+      } catch (error) {
+        console.error("Error sending audio to the backend:", error);
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            type: "text",
+            sender: "bot",
+            content: "Error: Unable to process the audio.",
+          },
+        ]);
+      }
     }
   };
 
-  // Function to handle the stop of the recording (no specific logic here yet)
-  const handleStop = () => {
-    // Reset logic can go here if needed
-  };
+  const handleStop = () => {};
 
-  // Utility function to convert Blob to WAV format (if necessary)
-  const convertBlobToWav = (audioBlob) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const arrayBuffer = reader.result;
-        const wavBlob = new Blob([arrayBuffer], { type: "audio/wav" });
-        resolve(wavBlob); // Return the converted WAV blob
-      };
-      reader.onerror = (err) => reject(err);
-      reader.readAsArrayBuffer(audioBlob); // Read the audio as an array buffer
-    });
-  };
-
-  // Function to send audio to the conversation-audio endpoint
-  async function sendAudioToConversationEndpoint(audioBlob) {
+  const sendAudioToConversationEndpoint = async (audioBlob, gender) => {
     const url = "http://127.0.0.1:8000/conversation-audio";
     const formData = new FormData();
     formData.append("audio", audioBlob, "audio.wav");
+    formData.append("gender", gender); // Pass the gender parameter to the backend
 
-    const response = await fetch(url, { method: "POST", body: formData });
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
+      throw new Error(
+        `Failed to process audio: ${response.statusText} - ${errorText}`
+      );
     }
 
-    return response; // Return the response directly to handle as a blob
-  }
+    return response;
+  };
 
   return (
     <div className="voice-chat-container">
@@ -139,6 +113,19 @@ const VoiceChat = ({
           <ArrowLeft />
         </button>
         <h1>Voice Chat</h1>
+      </div>
+
+      {/* Voice Gender Selection Dropdown */}
+      <div className="voice-gender-selector">
+        <label htmlFor="voice-gender">Select Voice Gender:</label>
+        <select
+          id="voice-gender"
+          value={selectedGender}
+          onChange={(e) => setSelectedGender(e.target.value)}
+        >
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
       </div>
 
       {/* Chat History Section */}
@@ -158,7 +145,6 @@ const VoiceChat = ({
           </div>
         ))}
 
-        {/* Display an animation when recording */}
         {isRecording && (
           <div className="listening-indicator">
             <div className="listening-text">Listening...</div>

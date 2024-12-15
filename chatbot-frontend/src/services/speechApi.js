@@ -23,26 +23,27 @@ export async function sendAudioToBackend(audioBlob) {
   }
 }
 
-export async function playAudioMessage(text) {
+export async function playAudioMessage(text, gender = "male") {
   const url = "http://127.0.0.1:8000/text-to-speech";
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
 
-  if (!response.ok) throw new Error("Failed to fetch audio response");
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, gender }),
+    });
 
-  const blob = await response.blob();
-  const audioUrl = URL.createObjectURL(blob);
-  console.log("Audio URL:", audioUrl);
+    if (!response.ok) throw new Error("Failed to fetch audio response");
 
-  //automatically play the audio
-  //uncomment this part to automatically play the audio
-  const audio = new Audio(audioUrl);
-  audio.play().catch(error => console.error("Audio playback error:", error));
+    const blob = await response.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    console.log("Audio URL:", audioUrl);
 
-
-  //no need for this as audio is currently playing automatically
-  //return audioUrl;
+    const audio = new Audio(audioUrl);
+    audio
+      .play()
+      .catch((error) => console.error("Audio playback error:", error));
+  } catch (error) {
+    console.error("Failed to play audio message:", error);
+  }
 }

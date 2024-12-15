@@ -131,6 +131,7 @@ async def conversation(request: Request):
     )
 
 
+
 @app.post("/voice-to-text")
 async def voice_to_text_endpoint(audio: UploadFile = File(...)):
     """
@@ -158,17 +159,20 @@ async def voice_to_text_endpoint(audio: UploadFile = File(...)):
 @app.post("/text-to-speech")
 async def text_to_speech_endpoint(request: Request):
     """
-    Endpoint to convert text to speech and return the audio file.
+    Convert text to speech and return the audio file.
+    Allows specifying gender for voice conversion.
     """
     data = await request.json()
     text = data.get("text")
+    gender = data.get("gender", "male")  # Default to male if no gender is specified
+
     if not text:
         return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
 
     try:
-        output_filename = 'response.mp3'
-        text_to_speech(text, filename=output_filename)
-        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
+        output_filename = "response.mp3"
+        text_to_speech(text, filename=output_filename, gender=gender)
+        return FileResponse(output_filename, media_type="audio/mpeg", filename=output_filename)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 

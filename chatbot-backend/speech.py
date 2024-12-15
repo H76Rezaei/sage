@@ -1,30 +1,39 @@
-import speech_recognition as sr
+import os
 from io import BytesIO
 from fastapi import UploadFile
 from gtts import gTTS
-import os
 from playsound import playsound
+import whisper
+
+
+# Load the Whisper model (choose 'tiny', 'base', 'small',Large )
+model = whisper.load_model("small")
 
 
 def voice_to_text(audio_data: BytesIO):
     """
-    Convert audio to text using SpeechRecognition.
+    Convert audio to text using OpenAI's Whisper model.
     """
-    recognizer = sr.Recognizer()
-
-    # Use the BytesIO object directly
     try:
-        with sr.AudioFile(audio_data) as source:
-            print("Recognizing speech...")
-            audio_recorded = recognizer.record(source)
-            text = recognizer.recognize_google(audio_recorded)
+        # Save the audio data to a temporary file
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_data.getvalue())
+
+        # Use the Whisper model to transcribe the audio
+        print("Recognizing speech using Whisper...")
+        result = model.transcribe("temp_audio.wav")
+        text = result.get("text", "")
+
+        # Clean up temporary file
+        os.remove("temp_audio.wav")
+
+        if text:
             return {"success": True, "text": text}
-    except sr.UnknownValueError:
-        return {"success": False, "error": "Could not understand the audio."}
-    except sr.RequestError as e:
-        return {"success": False, "error": f"Could not request results from Google Speech Recognition service; {str(e)}"}
+        else:
+            return {"success": False, "error": "Could not recognize text from audio."}
+
     except Exception as e:
-        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+        return {"success": False, "error": f"An error occurred: {str(e)}"}
 
 
 def text_to_speech(text, filename='response.mp3', play_sound=False):
@@ -35,15 +44,14 @@ def text_to_speech(text, filename='response.mp3', play_sound=False):
     try:
         tts = gTTS(text=text, lang='en')
         tts.save(filename)
-        print(f"Audio file saved as: {filename}")  # Log the file path
 
-        # Check if the file exists
+        print(f"Audio file saved as: {filename}")
+
         if os.path.exists(filename):
             print(f"Audio file {filename} exists.")
         else:
             print(f"Audio file {filename} does not exist.")
 
-        # Optionally, play the sound if needed
         if play_sound:
             try:
                 playsound(filename)
@@ -51,3 +59,4 @@ def text_to_speech(text, filename='response.mp3', play_sound=False):
                 print(f"Error playing sound: {e}")
     except Exception as e:
         print(f"Error converting text to speech: {e}")
+
