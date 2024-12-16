@@ -4,7 +4,7 @@ import Lottie from 'react-lottie';
 import listeningAnimation from "./Animation.json";
 import "./VoiceChat.css";
 
-const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setChatHistory }) => {
+const VoiceChat = ({ onSelectOption, streamAudioFromBackend, setChatHistory }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [statusText, setStatusText] = useState(''); // State to manage text content
   const [interruptMessage, setInterruptMessage] = useState(''); // State to manage interrupt message
@@ -181,8 +181,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
         }
 
         try {
-          const response = await sendAudioToConversationEndpoint(audioBlob);
-          
+          const audio = await streamAudioFromBackend(audioBlob);
+          /*
           // Check stop flag again after getting response
           if (stopFlagRef.current) {
             // If stopped during processing, don't play or save response
@@ -192,12 +192,15 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
           const backendAudioBlob = await response.blob();
           const backendAudioUrl = URL.createObjectURL(backendAudioBlob);
 
-          // Save bot message
+          // Save bot message*/
+          if (stopFlagRef.current) return;
+
+          botAudioRef.current = audio;
           setChatHistory((prev) => [
             ...prev,
-            { type: "audio", sender: "bot", content: backendAudioUrl },
+            { type: "audio", sender: "bot", content: audio.src },
           ]);
-
+/*
           // Only play if not stopped
           if (!stopFlagRef.current) {
             const botAudio = new Audio(backendAudioUrl);
@@ -210,19 +213,24 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
                 }
               });
 
-            // Show interrupt message when bot is responding
+            // Show interrupt message when bot is responding*/
+            await audio.play();
+
             setStatusText('Bot is responding...');
             setInterruptMessage('Start talking to interrupt.');
-
+/*
             // Restart recording after bot response
             botAudio.onended = () => {
-              if (!stopFlagRef.current) {  // Only restart if not stopped
+              if (!stopFlagRef.current) {  // Only restart if not stopped*/
+              audio.onended = () => {
+                if (!stopFlagRef.current) {
                 startRecording();
                 setStatusText('Listening...');
                 setInterruptMessage('');
-              }
+                }
+              //}
             };
-          }
+          
         } catch (error) {
           console.error("Error sending audio to the backend:", error);
           if (!stopFlagRef.current) {
@@ -307,7 +315,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
     }
   }
     */
-
+/*
   async function sendAudioToConversationEndpoint(audioBlob) {
     const url = "http://127.0.0.1:8000/conversation-audio-stream";
     const formData = new FormData();
@@ -360,6 +368,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
         throw error;
     }
 }
+    */
   
 
   const defaultOptions = {
