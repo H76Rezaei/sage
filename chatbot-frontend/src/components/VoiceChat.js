@@ -182,16 +182,7 @@ const VoiceChat = ({ onSelectOption, streamAudioFromBackend, setChatHistory }) =
 
         try {
           const audio = await streamAudioFromBackend(audioBlob);
-          /*
-          // Check stop flag again after getting response
-          if (stopFlagRef.current) {
-            // If stopped during processing, don't play or save response
-            return;
-          }
-
-          const backendAudioBlob = await response.blob();
-          const backendAudioUrl = URL.createObjectURL(backendAudioBlob);
-
+          
           // Save bot message*/
           if (stopFlagRef.current) return;
 
@@ -200,28 +191,12 @@ const VoiceChat = ({ onSelectOption, streamAudioFromBackend, setChatHistory }) =
             ...prev,
             { type: "audio", sender: "bot", content: audio.src },
           ]);
-/*
-          // Only play if not stopped
-          if (!stopFlagRef.current) {
-            const botAudio = new Audio(backendAudioUrl);
-            botAudioRef.current = botAudio; // Store the bot's audio reference
-            botAudio.play()
-              .catch(error => {
-                console.error("Audio playback error:", error);
-                if (!stopFlagRef.current) {
-                  onSelectOption('voiceHistory');
-                }
-              });
 
-            // Show interrupt message when bot is responding*/
             await audio.play();
 
             setStatusText('Bot is responding...');
             setInterruptMessage('Start talking to interrupt.');
-/*
-            // Restart recording after bot response
-            botAudio.onended = () => {
-              if (!stopFlagRef.current) {  // Only restart if not stopped*/
+
               audio.onended = () => {
                 if (!stopFlagRef.current) {
                 startRecording();
@@ -254,122 +229,6 @@ const VoiceChat = ({ onSelectOption, streamAudioFromBackend, setChatHistory }) =
   const handleStop = () => {
     // Reset logic can go here if needed
   };
-
-
-/*
-  async function sendAudioToConversationEndpoint(audioBlob) {
-    const url = "http://127.0.0.1:8000/conversation-audio";
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "audio.wav");
-
-    const response = await fetch(url, { method: "POST", body: formData });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
-    }
-
-    return response;
-  }
-
-  */
-
-  /*async function sendAudioToConversationEndpoint(audioBlob) {
-    const url = "http://127.0.0.1:8000/conversation-audio-stream";
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "audio.wav");
-  
-    try {
-      const response = await fetch(url, { method: "POST", body: formData });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to stream audio: ${response.statusText} - ${errorText}`
-        );
-      }
-  
-      // Use AudioContext to play streamed audio
-      const audioContext = new AudioContext();
-      const reader = response.body.getReader();
-  
-      const playStreamedAudio = async () => {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-  
-          // Decode and play audio chunk
-          const audioBuffer = await audioContext.decodeAudioData(value.buffer);
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(audioContext.destination);
-          source.start();
-        }
-      };
-  
-      // Play the audio stream
-      await playStreamedAudio();
-    } catch (error) {
-      console.error("Error streaming audio:", error);
-      throw error;
-    }
-  }
-    */
-/*
-  async function sendAudioToConversationEndpoint(audioBlob) {
-    const url = "http://127.0.0.1:8000/conversation-audio-stream";
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "audio.wav");
-    try {
-        const response = await fetch(url, { method: "POST", body: formData });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(
-                `Failed to stream audio: ${response.statusText} - ${errorText}`
-            );
-        }
-        
-        // Collect all chunks first
-        const chunks = [];
-        const reader = response.body.getReader();
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-        }
-        
-        // Concatenate chunks
-        const combinedBuffer = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
-        let offset = 0;
-        for (const chunk of chunks) {
-            combinedBuffer.set(chunk, offset);
-            offset += chunk.length;
-        }
-        
-        // Create a Blob from the combined buffer
-        const audioBlob = new Blob([combinedBuffer], { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        // Create an audio element and play
-        return new Promise((resolve, reject) => {
-            const audio = new Audio(audioUrl);
-            audio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-                resolve();
-            };
-            audio.onerror = (error) => {
-                URL.revokeObjectURL(audioUrl);
-                reject(new Error('Audio playback error'));
-            };
-            audio.play().catch(reject);
-        });
-    } catch (error) {
-        console.error("Error streaming audio:", error);
-        throw error;
-    }
-}
-    */
-  
 
   const defaultOptions = {
     loop: true,
