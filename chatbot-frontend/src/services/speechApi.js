@@ -1,5 +1,6 @@
+// speechApi.js
 export async function sendAudioToBackend(audioBlob) {
-  const url = "http://127.0.0.1:8000/voice-to-text";
+  const url = "http://127.0.0.1:8000/conversation-audio"; // Use the same endpoint
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
 
@@ -8,14 +9,11 @@ export async function sendAudioToBackend(audioBlob) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(
-        `Failed to process audio: ${response.statusText} - ${errorText}`
-      );
+      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json();
-    console.log("Received text from backend:", data.text);
-    return data.text;
+    // Return the response directly if that's what's needed
+    return response;
   } catch (error) {
     console.error("Error:", error);
     alert(`Error: ${error.message}`);
