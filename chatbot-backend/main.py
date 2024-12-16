@@ -8,7 +8,7 @@ from llama.ChatBotClass import DigitalCompanion
 #from llama.prompt_manager import get_initial_prompts
 from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
-from speech import  voice_to_text , text_to_speech, new_tts, cashed_tts_model
+from speech import  voice_to_text , text_to_speech, new_tts, cashed
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
 import os
@@ -142,7 +142,47 @@ async def conversation(request: Request):
 
 
 #no streaming
+@app.post("/conversation-audio")
+async def conversation_audio(audio: UploadFile):
+    """
+    End-to-end pipeline for audio-to-audio conversation.
+    """
+    try:
+        # Step 1: Convert Speech to Text
+        wav_audio = await convert_to_wav(audio)  
+        stt_result = voice_to_text(wav_audio)
+        if not stt_result["success"]:
+            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
 
+        user_input = stt_result["text"]
+        print(f"User said: {user_input}")
+
+        # Step 2: Generate Text Response
+        response_text = ""
+        async for chunk in chatbot.process_input("default_user", user_input):
+            response_text += chunk
+
+        print(f"Generated response: {response_text}")
+
+        # Ensure response_text is not empty
+        if not response_text.strip():
+            raise ValueError("No text to speak")
+        
+        # Generate speech using Coqui TTS
+        output_filename = "response.wav"
+        new_tts(response_text, filename=output_filename)
+
+        # If needed, convert to MP3
+        output_mp3_filename = "response.mp3"
+        convert_wav_to_mp3(output_filename, output_mp3_filename)
+
+        # Return the MP3 file
+        return FileResponse(output_mp3_filename, media_type='audio/mpeg', filename=output_mp3_filename)
+
+    except Exception as e:
+        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+
+"""
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
     
@@ -180,7 +220,7 @@ async def conversation_audio(audio: UploadFile):
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
-
+"""
 
 # attempted streaming but frontend difficulties
 # splits response into chunks
