@@ -247,6 +247,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
     // Reset logic can go here if needed
   };
 
+
+/*
   async function sendAudioToConversationEndpoint(audioBlob) {
     const url = "http://127.0.0.1:8000/conversation-audio";
     const formData = new FormData();
@@ -261,6 +263,50 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
 
     return response;
   }
+
+  */
+
+  async function sendAudioToConversationEndpoint(audioBlob) {
+    const url = "http://127.0.0.1:8000/conversation-audio-stream";
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.wav");
+  
+    try {
+      const response = await fetch(url, { method: "POST", body: formData });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to stream audio: ${response.statusText} - ${errorText}`
+        );
+      }
+  
+      // Use AudioContext to play streamed audio
+      const audioContext = new AudioContext();
+      const reader = response.body.getReader();
+  
+      const playStreamedAudio = async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+  
+          // Decode and play audio chunk
+          const audioBuffer = await audioContext.decodeAudioData(value.buffer);
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioContext.destination);
+          source.start();
+        }
+      };
+  
+      // Play the audio stream
+      await playStreamedAudio();
+    } catch (error) {
+      console.error("Error streaming audio:", error);
+      throw error;
+    }
+  }
+  
 
   const defaultOptions = {
     loop: true,
