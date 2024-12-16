@@ -266,7 +266,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
 
   */
 
-  async function sendAudioToConversationEndpoint(audioBlob) {
+  /*async function sendAudioToConversationEndpoint(audioBlob) {
     const url = "http://127.0.0.1:8000/conversation-audio-stream";
     const formData = new FormData();
     formData.append("audio", audioBlob, "audio.wav");
@@ -306,6 +306,60 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
       throw error;
     }
   }
+    */
+
+  async function sendAudioToConversationEndpoint(audioBlob) {
+    const url = "http://127.0.0.1:8000/conversation-audio-stream";
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.wav");
+    try {
+        const response = await fetch(url, { method: "POST", body: formData });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+                `Failed to stream audio: ${response.statusText} - ${errorText}`
+            );
+        }
+        
+        // Collect all chunks first
+        const chunks = [];
+        const reader = response.body.getReader();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+        }
+        
+        // Concatenate chunks
+        const combinedBuffer = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
+        let offset = 0;
+        for (const chunk of chunks) {
+            combinedBuffer.set(chunk, offset);
+            offset += chunk.length;
+        }
+        
+        // Create a Blob from the combined buffer
+        const audioBlob = new Blob([combinedBuffer], { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Create an audio element and play
+        return new Promise((resolve, reject) => {
+            const audio = new Audio(audioUrl);
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                resolve();
+            };
+            audio.onerror = (error) => {
+                URL.revokeObjectURL(audioUrl);
+                reject(new Error('Audio playback error'));
+            };
+            audio.play().catch(reject);
+        });
+    } catch (error) {
+        console.error("Error streaming audio:", error);
+        throw error;
+    }
+}
   
 
   const defaultOptions = {
