@@ -4,8 +4,7 @@ import TextChat from './components/TextChat';
 import VoiceChat from './components/VoiceChat';
 import VoiceHistory from './components/VoiceHistory';
 import { sendConversation } from "./services/textApi";
-import { streamAudioFromBackend } from "./services/speechApi";
-
+import { sendAudioToBackend, playAudioMessage } from "./services/speechApi";
 
 function App() {
     const [selectedOption, setSelectedOption] = useState('main');
@@ -40,7 +39,8 @@ function App() {
                 <VoiceChat 
                     key={selectedOption} // Force unmount when switching views
                     onSelectOption={handleSelectOption} 
-                    streamAudioFromBackend={streamAudioFromBackend} 
+                    sendAudioToBackend={sendAudioToBackend} 
+                    playAudioMessage={playAudioMessage} 
                     saveToHistory={saveToHistory}
                     setChatHistory={setChatHistory}
                 />
