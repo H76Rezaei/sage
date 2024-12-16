@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import Lottie from 'react-lottie';
 import listeningAnimation from "./Animation.json";
 import "./VoiceChat.css";
+import { sendAudioToBackend } from '../services/speechApi';
 
 const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setChatHistory }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -248,18 +249,14 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
   };
 
   async function sendAudioToConversationEndpoint(audioBlob) {
-    const url = "http://127.0.0.1:8000/conversation-audio";
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "audio.wav");
-
-    const response = await fetch(url, { method: "POST", body: formData });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
+    try {
+      const response = await sendAudioToBackend(audioBlob);
+      console.log("Processed response:", response);
+      return response;
+    } catch (error) {
+      console.error("Error sending audio to the backend:", error);
+      throw error;
     }
-
-    return response;
   }
 
   const defaultOptions = {
