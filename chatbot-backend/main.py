@@ -8,7 +8,7 @@ from llama.ChatBotClass import DigitalCompanion
 #from llama.prompt_manager import get_initial_prompts
 from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
-from speech import  voice_to_text , text_to_speech, new_tts, cashed
+from speech import  voice_to_text , text_to_speech, new_tts, cashed_tts_model
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
 import os
@@ -141,12 +141,11 @@ async def conversation(request: Request):
     )
 
 
+#no streaming
 
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
-    """
-    End-to-end pipeline for audio-to-audio conversation.
-    """
+    
     try:
         # Step 1: Convert Speech to Text
         wav_audio = await convert_to_wav(audio)  
@@ -181,53 +180,10 @@ async def conversation_audio(audio: UploadFile):
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
-    
-"""    
-@app.post("/conversation-audio-stream")
-async def conversation_audio_stream(audio: UploadFile):
-     try:
-        # Step 1: Convert Speech to Text
-        wav_audio = await convert_to_wav(audio)
-        stt_result = voice_to_text(wav_audio)
-        if not stt_result["success"]:
-            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
 
-        user_input = stt_result["text"]
-        print(f"User said: {user_input}")
 
-        # Step 2: Generate Text Response
-        response_text = ""
-        async for chunk in chatbot.process_input("default_user", user_input):
-            response_text += chunk
-
-        # Tokenize into sentences
-        sentences = sent_tokenize(response_text)
-        print(f"Generated sentences: {sentences}")
-        #print(f"Generated response: {response_text}")
-
-        # Stream audio sentence by sentence
-        async def audio_stream():
-            for i, sentence in enumerate(sentences):
-                try:
-                    temp_filename = f"chunk_{i}.wav"
-                    tts_model.tts_to_file(text=sentence, file_path=temp_filename, speaker="VCTK_p225" )
-                    print(f"Generated chunk: {temp_filename}")
-                    with open(temp_filename, "rb") as f:
-                        yield f.read()
-                except Exception as e:
-                    print(f"Error generating or reading chunk {i}: {str(e)}")
-                    raise        
-
-        return StreamingResponse(audio_stream(), media_type="audio/wav")
-     except Exception as e:
-         import traceback
-         traceback.print_exc()  # Print the full traceback to the logs
-         return JSONResponse(
-            content={"error": f"Error in audio processing: {str(e)}"},
-            status_code=500
-         )
-"""
-
+# attempted streaming but frontend difficulties
+# splits response into chunks
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile):
     temp_files = []  # Track temp files
