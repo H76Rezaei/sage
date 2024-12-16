@@ -13,37 +13,18 @@ export async function streamAudioFromBackend(audioBlob) {
       );
     }
 
-    // Set up an AudioContext for playing audio
-    const audioContext = new AudioContext();
-    const source = audioContext.createBufferSource();
-    const stream = response.body;
+    // Get the response as a blob
+    const audioData = await response.blob();
+    
+    // Create an audio element
+    const audio = new Audio(URL.createObjectURL(audioData));
 
-    const reader = stream.getReader();
+    // Clean up the object URL when done
+    audio.onended = () => {
+      URL.revokeObjectURL(audio.src);
+    };
 
-    // Process the chunks
-    async function processChunks() {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        console.log("Chunk received:", value);
-
-        // Decode and play the received chunk
-        const audioBuffer = await audioContext.decodeAudioData(value.buffer).catcg((err)=>{
-          console.error("Audio decoding error:", err);
-        });
-        source.buffer = audioBuffer;
-        source.connect(audioContext.destination);
-        source.start();
-      }
-
-      // Cleanup
-      source.disconnect();
-    }
-
-    // Start processing chunks
-    await processChunks();
-
-    return;
+    return audio;
   } catch (error) {
     console.error("Error streaming audio from backend:", error);
     throw error;
