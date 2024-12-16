@@ -8,7 +8,7 @@ from llama.ChatBotClass import DigitalCompanion
 #from llama.prompt_manager import get_initial_prompts
 from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
-from speech import  voice_to_text , text_to_speech
+from speech import  voice_to_text , text_to_speech, new_tts
 
 
 from pydub import AudioSegment
@@ -109,6 +109,13 @@ async def convert_to_wav(audio: UploadFile):
         return output_audio
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
+    
+
+
+def convert_wav_to_mp3(wav_file, mp3_file):
+    audio = AudioSegment.from_wav(wav_file)
+    audio.export(mp3_file, format="mp3")
+
 
 @app.post("/conversation")
 async def conversation(request: Request):
@@ -128,47 +135,6 @@ async def conversation(request: Request):
         media_type="text/event-stream"
     )
 
-
-@app.post("/voice-to-text")
-async def voice_to_text_endpoint(audio: UploadFile = File(...)):
-    """
-    Endpoint to convert audio to text.
-    """
-    try:
-        # Convert audio to WAV format first
-        wav_audio = await convert_to_wav(audio)
-
-        # Pass the WAV audio to voice_to_text function
-        stt_result = voice_to_text(wav_audio)
-        
-        # Log the result of the speech-to-text conversion
-        print(f"STT Result: {stt_result}")
-
-        if not stt_result["success"]:
-            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-
-        return JSONResponse(content={"text": stt_result["text"]})
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing the audio: {str(e)}")
-
-    
-@app.post("/text-to-speech")
-async def text_to_speech_endpoint(request: Request):
-    """
-    Endpoint to convert text to speech and return the audio file.
-    """
-    data = await request.json()
-    text = data.get("text")
-    if not text:
-        return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
-
-    try:
-        output_filename = 'response.mp3'
-        text_to_speech(text, filename=output_filename)
-        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
@@ -195,13 +161,26 @@ async def conversation_audio(audio: UploadFile):
         # Ensure response_text is not empty
         if not response_text.strip():
             raise ValueError("No text to speak")
+        
+        # Generate speech using Coqui TTS
+        output_filename = "response.wav"
+        new_tts(response_text, filename=output_filename)
 
+        # If needed, convert to MP3
+        output_mp3_filename = "response.mp3"
+        convert_wav_to_mp3(output_filename, output_mp3_filename)
+
+        # Return the MP3 file
+        return FileResponse(output_mp3_filename, media_type='audio/mpeg', filename=output_mp3_filename)
+
+        """
         # Step 3: Convert Text Response to Speech
         output_filename = "response.mp3"
         text_to_speech(response_text, filename=output_filename)
 
         # Step 4: Return the audio file generated
         return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
+        """
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
