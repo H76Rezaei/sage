@@ -32,3 +32,4 @@ langchain_community
 supabase
 ollama
 coqui-tts
+openai-whisper
