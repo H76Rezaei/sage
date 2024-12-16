@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from speech import  voice_to_text , text_to_speech, new_tts, cashed
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
-
+import os
 from pydub import AudioSegment
 from io import BytesIO
 from fastapi import UploadFile, File, HTTPException
@@ -228,9 +228,9 @@ async def conversation_audio_stream(audio: UploadFile):
          )
 """
 
-
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile):
+    temp_files = []  # Track temp files
     try:
         # Step 1: Convert Speech to Text
         wav_audio = await convert_to_wav(audio)
@@ -254,9 +254,16 @@ async def conversation_audio_stream(audio: UploadFile):
         combined = AudioSegment.empty()
         for i, sentence in enumerate(sentences):
             temp_filename = f"chunk_{i}.wav"
+            temp_files.append(temp_filename)  # Track the temp file
             tts_model.tts_to_file(text=sentence, file_path=temp_filename, speaker="VCTK_p297")
             chunk = AudioSegment.from_wav(temp_filename)
             combined += chunk
+            # Clean up chunk file immediately
+            try:
+                os.remove(temp_filename)
+                print(f"Cleaned up chunk file: {temp_filename}")
+            except Exception as e:
+                print(f"Error cleaning chunk file {temp_filename}: {e}")
         
         # Save to a bytes buffer
         wav_buffer = io.BytesIO()
@@ -266,11 +273,25 @@ async def conversation_audio_stream(audio: UploadFile):
         # Return the combined WAV file
         return StreamingResponse(
             io.BytesIO(wav_buffer.getvalue()), 
-            media_type="audio/wav"
+            media_type="audio/wav",
+            headers={"Content-Type": "audio/wav"}
         )
     
     except Exception as e:
+        # Clean up any remaining temp files
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    print(f"Cleaned up temp file in error handler: {temp_file}")
+            except Exception as cleanup_error:
+                print(f"Error cleaning up {temp_file}: {cleanup_error}")
+        
+        print(f"Error in audio processing: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
