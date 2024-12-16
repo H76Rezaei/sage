@@ -141,18 +141,6 @@ async def conversation(request: Request):
     )
 
 
-current_playback = None
-
-def play_audio(filename):
-    global current_playback
-    if current_playback is not None:
-        current_playback.terminate()  # Stop the previous playback thread
-
-    def playback():
-        playsound(filename)
-
-    current_playback = Thread(target=playback)
-    current_playback.start()
 
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
