@@ -258,11 +258,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
 
   async function sendAudioToConversationEndpoint(audioBlob) {
     try {
-      const response = await sendAudioToBackend(audioBlob);
-      console.log("Processed response:", response);
-      return response;
+      return await sendAudioToBackend(audioBlob);
     } catch (error) {
-      console.error("Error sending audio to the backend:", error);
+      console.error("Error processing audio:", error);
       throw error;
     }
   }
