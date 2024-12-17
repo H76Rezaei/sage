@@ -162,11 +162,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
   const handleDataAvailable = async (event) => {
     // Don't process data if stop flag is set
     if (stopFlagRef.current) return;
-
+  
     if (event.data.size > 0) {
       const audioBlob = new Blob([event.data], { type: "audio/webm" });
       const audioUrl = URL.createObjectURL(audioBlob);
-
+  
       // Only process if the audio is meaningful and stop flag is not set
       if (audioBlob.size > 1000 && !stopFlagRef.current) {
         // Save user message
@@ -174,13 +174,13 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
           ...prev,
           { type: "audio", sender: "user", content: audioUrl },
         ]);
-
+  
         // Stop bot's response if new message is detected
         if (botAudioRef.current) {
           botAudioRef.current.pause();
           botAudioRef.current.currentTime = 0;
         }
-
+  
         try {
           const response = await sendAudioToConversationEndpoint(audioBlob);
           
@@ -189,35 +189,42 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
             // If stopped during processing, don't play or save response
             return;
           }
-
+  
           const backendAudioBlob = await response.blob();
           const backendAudioUrl = URL.createObjectURL(backendAudioBlob);
-
+          
           // Save bot message
           setChatHistory((prev) => [
             ...prev,
             { type: "audio", sender: "bot", content: backendAudioUrl },
           ]);
-
+  
           // Only play if not stopped
           if (!stopFlagRef.current) {
             const botAudio = new Audio(backendAudioUrl);
             botAudioRef.current = botAudio; // Store the bot's audio reference
+  
             botAudio.play()
-              .catch(error => {
+              .catch((error) => {
                 console.error("Audio playback error:", error);
-                if (!stopFlagRef.current) {
-                  onSelectOption('voiceHistory');
-                }
+                
+                // Add a text fallback message
+                setChatHistory((prev) => [
+                  ...prev,
+                  { type: "text", sender: "bot", content: "Sorry, I had trouble responding. Could you please try again?" },
+                ]);
+                
+                // Restart recording
+                startRecording();
               });
-
+  
             // Show interrupt message when bot is responding
             setStatusText('Bot is responding...');
             setInterruptMessage('Start talking to interrupt.');
-
+  
             // Restart recording after bot response
             botAudio.onended = () => {
-              if (!stopFlagRef.current) {  // Only restart if not stopped
+              if (!stopFlagRef.current) { // Only restart if not stopped
                 startRecording();
                 setStatusText('Listening...');
                 setInterruptMessage('');
@@ -226,17 +233,18 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
           }
         } catch (error) {
           console.error("Error sending audio to the backend:", error);
-          if (!stopFlagRef.current) {
-            cleanup();
-            setChatHistory((prev) => [
-              ...prev,
-              { type: "text", sender: "bot", content: "Error: Unable to process the audio." },
-            ]);
-            onSelectOption('voiceHistory');
-          }
+          
+          // Add a text fallback message
+          setChatHistory((prev) => [
+            ...prev,
+            { type: "text", sender: "bot", content: "Sorry, I had trouble understanding your message. Could you please try speaking again?" },
+          ]);
+          
+          // Restart recording
+          startRecording();
         }
       }
-
+      
       // Only restart recording if not stopped
       if (!stopFlagRef.current) {
         startRecording();
