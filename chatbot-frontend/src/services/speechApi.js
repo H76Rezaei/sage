@@ -1,25 +1,36 @@
-// speechApi.js
-export async function sendAudioToBackend(audioBlob) {
-  const url = "http://127.0.0.1:8000/conversation-audio"; // Use the same endpoint
+export async function streamAudioFromBackend(audioBlob) {
+  const url = "http://127.0.0.1:8000/conversation-audio-stream";
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
 
   try {
     const response = await fetch(url, { method: "POST", body: formData });
+    if (!response.ok) throw new Error(`Streaming failed: ${response.statusText}`);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to process audio: ${response.statusText} - ${errorText}`);
+    const audioContext = new AudioContext();
+    const source = audioContext.createBufferSource();
+    const audioChunks = [];
+    const reader = response.body.getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      audioChunks.push(value);
     }
 
-    // Return the response directly if that's what's needed
-    return response;
+    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => URL.revokeObjectURL(audio.src); // Clean up
+    await audio.play();
+    return audio;
   } catch (error) {
-    console.error("Error:", error);
-    //alert(`Error: ${error.message}`);
+    console.error("Error streaming audio:", error);
     throw error;
   }
 }
+
 
 export async function playAudioMessage(text) {
   const url = "http://127.0.0.1:8000/text-to-speech";
