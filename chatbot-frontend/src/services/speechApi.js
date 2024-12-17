@@ -6,6 +6,7 @@ export async function sendAudioToBackend(audioBlob) {
   // Playback queue
   const playbackQueue = [];
   let isPlaying = false;
+  let currentChunk = null;
 
   const playNextChunk = () => {
     if (playbackQueue.length === 0) {
@@ -20,14 +21,13 @@ export async function sendAudioToBackend(audioBlob) {
 
     audio.play().catch(error => {
       console.error("Error playing audio chunk:", error);
-      // Continue to next chunk even if this one fails
       URL.revokeObjectURL(audioUrl);
       playNextChunk();
     });
 
     audio.onended = () => {
       URL.revokeObjectURL(audioUrl);
-      playNextChunk(); // Play the next chunk
+      playNextChunk();
     };
   };
 
@@ -36,15 +36,14 @@ export async function sendAudioToBackend(audioBlob) {
     if (!response.body) throw new Error("No readable stream in response");
 
     const reader = response.body.getReader();
-    const chunks = [];
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       if (value.byteLength > 0) {
-        // More comprehensive WAV header validation
-        const isValidWav = (
+        // Check if this is the start of a new WAV file
+        const isWavHeader = (
           value[0] === 82 &&   // R
           value[1] === 73 &&   // I
           value[2] === 70 &&   // F
@@ -54,21 +53,37 @@ export async function sendAudioToBackend(audioBlob) {
         console.log("Received chunk:", {
           byteLength: value.byteLength,
           firstBytes: Array.from(value.slice(0, 20)),
-          isValidWav: isValidWav
+          isWavHeader: isWavHeader
         });
 
-        if (!isValidWav) {
-          console.error("Invalid WAV chunk:", value.slice(0, 44));
-          continue;
+        if (isWavHeader) {
+          // Start of a new WAV file, process previous chunk if exists
+          if (currentChunk) {
+            const chunkBlob = new Blob([currentChunk], { type: "audio/wav" });
+            playbackQueue.push(chunkBlob);
+            
+            if (!isPlaying) {
+              playNextChunk();
+            }
+          }
+          
+          // Reset current chunk to new WAV file
+          currentChunk = value;
+        } else if (currentChunk) {
+          // Append to existing chunk
+          const combinedChunk = new Uint8Array([...currentChunk, ...value]);
+          currentChunk = combinedChunk;
         }
+      }
+    }
 
-        const chunkBlob = new Blob([value], { type: "audio/wav" });
-        playbackQueue.push(chunkBlob);
-
-        // Ensure playback starts for all queued chunks
-        if (!isPlaying) {
-          playNextChunk();
-        }
+    // Process final chunk
+    if (currentChunk) {
+      const chunkBlob = new Blob([currentChunk], { type: "audio/wav" });
+      playbackQueue.push(chunkBlob);
+      
+      if (!isPlaying) {
+        playNextChunk();
       }
     }
 

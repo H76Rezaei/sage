@@ -208,7 +208,7 @@ async def conversation_audio_stream(audio: UploadFile):
         sentences = sent_tokenize(response_text)
         print(f"Generated sentences: {sentences}")
         
-        # Stream individual WAV chunks
+        # Stream individual WAV chunks with controlled chunk size
         async def generate_wav_chunks():
             for i, sentence in enumerate(sentences):
                 temp_filename = f"chunk_{i}.wav"
@@ -217,13 +217,24 @@ async def conversation_audio_stream(audio: UploadFile):
                 # Generate WAV file for each sentence
                 tts_model.tts_to_file(text=sentence, file_path=temp_filename)
                 
-                # Read the entire WAV file and yield it
+                # Read the entire WAV file
                 with open(temp_filename, 'rb') as wav_file:
                     chunk_data = wav_file.read()
-                    print(f"Chunk {i} size: {len(chunk_data)} bytes")
-                    print(f"First 20 bytes: {chunk_data[:20]}")
-                    print(f"Is valid WAV: {chunk_data[:4] == b'RIFF'}")
-                    yield chunk_data
+                    
+                    # Split large chunks into smaller, manageable sizes
+                    max_chunk_size = 100 * 1024  # 100 KB chunks
+                    for j in range(0, len(chunk_data), max_chunk_size):
+                        chunk = chunk_data[j:j+max_chunk_size]
+                        
+                        # Ensure first chunk keeps the WAV header
+                        if j == 0:
+                            print(f"Chunk {i}-{j} size: {len(chunk)} bytes")
+                            print(f"First 20 bytes: {chunk[:20]}")
+                            print(f"Is valid WAV: {chunk[:4] == b'RIFF'}")
+                            yield chunk
+                        else:
+                            # For subsequent chunks, only yield the audio data
+                            yield chunk
         
         # Return a streaming response with individual WAV chunks
         return StreamingResponse(
