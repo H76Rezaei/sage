@@ -3,7 +3,7 @@ export async function sendAudioToBackend(audioBlob) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
 
-  // Playback queue with better chunk management
+  // More sophisticated playback queue
   const playbackQueue = [];
   let isPlaying = false;
   let currentChunk = null;
@@ -37,14 +37,15 @@ export async function sendAudioToBackend(audioBlob) {
     if (!response.body) throw new Error("No readable stream in response");
 
     const reader = response.body.getReader();
-    let previousChunkWasHeader = false;
+    let headerCount = 0;
+    let lastHeaderPosition = -1;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       if (value.byteLength > 0) {
-        // Improved WAV header detection
+        // More sophisticated WAV header detection
         const isWavHeader = (
           value[0] === 82 &&   // R
           value[1] === 73 &&   // I
@@ -52,45 +53,40 @@ export async function sendAudioToBackend(audioBlob) {
           value[3] === 70      // F
         );
 
-        // Debug logging with chunk counter
-        console.log(`Chunk ${chunkCounter++}:`, {
-          byteLength: value.byteLength,
-          isWavHeader: isWavHeader,
-          previousChunkWasHeader: previousChunkWasHeader
-        });
-
         if (isWavHeader) {
-          // If previous chunk was a header, this is a new audio segment
-          if (previousChunkWasHeader && currentChunk) {
-            console.warn("Multiple WAV headers detected. Finalizing previous chunk.");
-            const finalChunkBlob = new Blob([currentChunk], { type: "audio/wav" });
-            playbackQueue.push(finalChunkBlob);
-          }
+          headerCount++;
           
-          // Start a new chunk with this WAV header
+          // If this is not the first header, process the previous chunk
+          if (headerCount > 1 && currentChunk) {
+            console.log(`Processing chunk before header #${headerCount}`);
+            const chunkBlob = new Blob([currentChunk], { type: "audio/wav" });
+            playbackQueue.push(chunkBlob);
+            
+            if (!isPlaying) {
+              playNextChunk();
+            }
+          }
+
+          // Reset current chunk to new WAV header
           currentChunk = value;
-          previousChunkWasHeader = true;
+          lastHeaderPosition = chunkCounter;
         } else {
-          // Non-header chunk: append to current chunk
+          // Append to current chunk if it exists
           if (currentChunk) {
             const combinedChunk = new Uint8Array([...currentChunk, ...value]);
             currentChunk = combinedChunk;
-            previousChunkWasHeader = false;
           } else {
-            console.warn("Received non-header chunk without a preceding header");
+            console.warn(`Received non-header chunk without preceding header at chunk ${chunkCounter}`);
             continue;
           }
         }
 
-        // Queue for playback if chunk is substantial
-        if (!isWavHeader && currentChunk && currentChunk.byteLength > 1024) {
-          const chunkBlob = new Blob([currentChunk], { type: "audio/wav" });
-          playbackQueue.push(chunkBlob);
-          
-          if (!isPlaying) {
-            playNextChunk();
-          }
-        }
+        // Debug logging
+        console.log(`Chunk ${chunkCounter++}:`, {
+          byteLength: value.byteLength,
+          isWavHeader: isWavHeader,
+          headerCount: headerCount
+        });
       }
     }
 
@@ -105,6 +101,8 @@ export async function sendAudioToBackend(audioBlob) {
     }
 
     console.log("All audio chunks have been processed.");
+    console.log(`Total headers found: ${headerCount}`);
+    console.log(`Total chunks processed: ${chunkCounter}`);
   } catch (error) {
     console.error("Error streaming audio from backend:", error);
   }
