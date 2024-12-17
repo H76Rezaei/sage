@@ -208,25 +208,27 @@ async def conversation_audio_stream(audio: UploadFile):
         sentences = sent_tokenize(response_text)
         print(f"Generated sentences: {sentences}")
         
-        # Combine audio chunks into a single WAV file
-        combined = AudioSegment.empty()
-        for i, sentence in enumerate(sentences):
-            temp_filename = f"chunk_{i}.wav"
-            temp_files.append(temp_filename)  # Track the temp file
-            tts_model.tts_to_file(text=sentence, file_path=temp_filename)
-            chunk = AudioSegment.from_wav(temp_filename)
-            combined += chunk
+        # Stream individual WAV chunks
+        async def generate_wav_chunks():
+            for i, sentence in enumerate(sentences):
+                temp_filename = f"chunk_{i}.wav"
+                temp_files.append(temp_filename)
+                
+                # Generate WAV file for each sentence
+                tts_model.tts_to_file(text=sentence, file_path=temp_filename)
+                
+                # Read the entire WAV file and yield it
+                with open(temp_filename, 'rb') as wav_file:
+                    chunk_data = wav_file.read()
+                    print(f"Chunk {i} size: {len(chunk_data)} bytes")
+                    print(f"First 20 bytes: {chunk_data[:20]}")
+                    print(f"Is valid WAV: {chunk_data[:4] == b'RIFF'}")
+                    yield chunk_data
         
-        # Save to a bytes buffer
-        wav_buffer = io.BytesIO()
-        combined.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        
-        # Return the combined WAV file
+        # Return a streaming response with individual WAV chunks
         return StreamingResponse(
-            io.BytesIO(wav_buffer.getvalue()), 
-            media_type="audio/wav",
-            headers={"Content-Type": "audio/wav"}
+            generate_wav_chunks(), 
+            media_type="audio/wav"
         )
     
     except Exception as e:    
@@ -234,6 +236,13 @@ async def conversation_audio_stream(audio: UploadFile):
         import traceback
         traceback.print_exc()
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+    finally:
+        # Clean up temporary files
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except Exception as cleanup_error:
+                print(f"Error cleaning up temp file {temp_file}: {cleanup_error}")
 
 
 

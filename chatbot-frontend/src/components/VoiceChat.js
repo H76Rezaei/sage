@@ -5,7 +5,7 @@ import listeningAnimation from "./Animation.json";
 import "./VoiceChat.css";
 import { sendAudioToBackend } from '../services/speechApi';
 
-const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setChatHistory }) => {
+const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [statusText, setStatusText] = useState(''); // State to manage text content
   const [interruptMessage, setInterruptMessage] = useState(''); // State to manage interrupt message
@@ -173,8 +173,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
         ]);
   
         try {
-          await sendAudioToConversationEndpoint(audioBlob);
-          startRecording();
+          await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
+          startRecording(); // Restart recording after bot response
         } catch (error) {
           console.error("Error handling bot audio:", error);
           cleanup();
@@ -183,6 +183,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
     }
   };
   
+  
+  
+  
 
   const handleStop = () => {
     // Reset logic can go here if needed
@@ -190,14 +193,14 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, playAudioMessage, setCh
 
   async function sendAudioToConversationEndpoint(audioBlob) {
     try {
-      const response = await sendAudioToBackend(audioBlob); // Call updated backend streaming function
-      console.log("Bot audio response:", response); // Log the response
-      return response; // Ensure it returns an Audio object
+      await sendAudioToBackend(audioBlob); // Pass the blob to the backend for processing
+      console.log("Audio chunks enqueued for playback.");
     } catch (error) {
       console.error("Error processing audio in conversation endpoint:", error);
       throw error;
     }
   }
+  
   
 
   const defaultOptions = {
