@@ -5,31 +5,42 @@ export async function sendAudioToBackend(audioBlob) {
 
   try {
     const response = await fetch(url, { method: "POST", body: formData });
-    if (!response.ok) throw new Error(`Streaming failed: ${response.statusText}`);
+    if (!response.body) throw new Error("No readable stream in response");
 
-    const audioContext = new AudioContext();
-    const source = audioContext.createBufferSource();
-    const audioChunks = [];
     const reader = response.body.getReader();
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      audioChunks.push(value);
+
+      if (value) {
+        console.log("Received audio chunk:", value);
+
+        try {
+          // Decode and play each chunk
+          const audioData = await audioContext.decodeAudioData(value.buffer);
+          playDecodedChunk(audioData, audioContext);
+        } catch (decodeError) {
+          console.error("Error decoding audio chunk:", decodeError);
+        }
+      }
     }
-
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-
-    audio.onended = () => URL.revokeObjectURL(audio.src); // Clean up
-    await audio.play();
-    return audio;
   } catch (error) {
-    console.error("Error streaming audio:", error);
+    console.error("Error streaming audio from backend:", error);
     throw error;
   }
 }
+
+function playDecodedChunk(audioBuffer, audioContext) {
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+  console.log("Playing chunk...");
+  source.onended = () => console.log("Chunk playback finished.");
+}
+
 
 
 export async function playAudioMessage(text) {
