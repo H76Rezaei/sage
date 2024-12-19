@@ -199,32 +199,31 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
                 ...prev,
                 { type: "text", sender: "bot", content: `Error: ${errorText || response.statusText}` },
             ]);
-            return; // Important: Stop further processing if the response is an error
+            return;
         }
 
         const reader = response.body.getReader();
         let accumulatedData = new Uint8Array();
-        let chunkCounter = 0;
         const playbackQueue = [];
         let isPlaying = false;
 
         const playNextChunk = () => {
             if (playbackQueue.length === 0) {
                 isPlaying = false;
-                botAudioRef.current = null; // Clear the ref when playback is finished
+                botAudioRef.current = null;
                 return;
             }
             isPlaying = true;
             const audioBlob = playbackQueue.shift();
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
-            botAudioRef.current = audio; // Assign the audio to the ref
+            botAudioRef.current = audio;
 
             audio.play().catch(error => {
                 console.error("Error playing audio chunk:", error);
                 URL.revokeObjectURL(audioUrl);
                 playNextChunk();
-                botAudioRef.current = null; // Clear the ref in case of error
+                botAudioRef.current = null;
             });
 
             audio.onended = () => {
@@ -246,37 +245,38 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
                 let startIndex = 0;
                 while (startIndex < accumulatedData.length) {
                     const isWavHeader =
-                        accumulatedData[startIndex] === 82 && // R
-                        accumulatedData[startIndex + 1] === 73 && // I
-                        accumulatedData[startIndex + 2] === 70 && // F
-                        accumulatedData[startIndex + 3] === 70; // F
+                        accumulatedData[startIndex] === 82 &&
+                        accumulatedData[startIndex + 1] === 73 &&
+                        accumulatedData[startIndex + 2] === 70 &&
+                        accumulatedData[startIndex + 3] === 70;
 
                     if (isWavHeader) {
                         let dataLength = accumulatedData.length - startIndex;
-                        if (dataLength >= 8) { // Check for minimum RIFF header size
-                            const riffChunkSize = new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8; // Read chunk size
+                        if (dataLength >= 8) {
+                            const riffChunkSize = new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
                             if (dataLength >= riffChunkSize) {
                                 const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
                                 const chunkBlob = new Blob([wavData], { type: "audio/wav" });
                                 playbackQueue.push(chunkBlob);
+                                // Add to chat history *immediately* after pushing to playbackQueue:
+                                const botAudioUrl = URL.createObjectURL(chunkBlob); //Create URL right after the blob is created
+                                setChatHistory((prev) => [
+                                    ...prev,
+                                    { type: "audio", sender: "bot", content: botAudioUrl },
+                                ]);
                                 if (!isPlaying) playNextChunk();
 
                                 startIndex += riffChunkSize;
-                                continue; // Process next WAV in accumulated data
+                                continue;
                             }
                         }
                     }
-                    break; // No more complete WAV files found
+                    break;
                 }
-                accumulatedData = accumulatedData.subarray(startIndex); // Remove processed data
-                console.log(`Chunk ${chunkCounter++}:`, { byteLength: value.byteLength });
+                accumulatedData = accumulatedData.subarray(startIndex);
             }
         }
 
-        setChatHistory((prev) => [
-            ...prev,
-            { type: "text", sender: "bot", content: "Bot response..." }, // Add to history after successful processing
-        ]);
         console.log("All audio chunks processed.");
     } catch (error) {
         console.error("Error streaming audio:", error);
