@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import MainPage from './components/MainPage';
 import TextChat from './components/TextChat';
 import VoiceChat from './components/VoiceChat';
+import VoiceHistory from './components/VoiceHistory';
 import { sendConversation } from "./services/textApi";
-import { sendAudioToBackend, playAudioMessage } from "./services/speechApi";
+import { sendAudioToBackend } from "./services/speechApi";
 
 function App() {
-    const [selectedOption, setSelectedOption] = useState(null);
+    const [selectedOption, setSelectedOption] = useState('main');
     const [chatHistory, setChatHistory] = useState([]);
 
     const saveToHistory = (message) => {
@@ -15,31 +16,45 @@ function App() {
         localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
     };
 
+    const handleSelectOption = (option) => {
+        if (option === 'stop' || option === 'voiceHistory') {
+            setSelectedOption('voiceHistory');
+        } else {
+            setSelectedOption(option);
+        }
+    };
 
     const renderContent = () => {
         if (selectedOption === 'text') {
-        return (
-            <TextChat 
-                onSelectOption={setSelectedOption} 
-                sendConversation={sendConversation} 
-                saveToHistory={saveToHistory} 
-            />
-        );
-    }
-        if (selectedOption === 'voice') {
             return (
-                <VoiceChat 
-                    onSelectOption={setSelectedOption} 
-                    sendAudioToBackend={sendAudioToBackend} 
-                    playAudioMessage={playAudioMessage} 
-                    saveToHistory={saveToHistory}
+                <TextChat 
+                    onSelectOption={handleSelectOption} 
+                    sendConversation={sendConversation} 
+                    saveToHistory={saveToHistory} 
                 />
             );
         }
-        return <MainPage onSelectOption={setSelectedOption} />;
+        if (selectedOption === 'voice') {
+            return (
+                <VoiceChat 
+                    key={selectedOption} // Force unmount when switching views
+                    onSelectOption={handleSelectOption} 
+                    sendAudioToBackend={sendAudioToBackend} 
+                    saveToHistory={saveToHistory}
+                    setChatHistory={setChatHistory}
+                />
+            );
+        }
+        if (selectedOption === 'voiceHistory') {
+            return (
+                <VoiceHistory 
+                    onSelectOption={handleSelectOption} 
+                    chatHistory={chatHistory} 
+                />
+            );
+        }
+        return <MainPage onSelectOption={handleSelectOption} />;
     };
-
-
 
     return <div className="app-container">{renderContent()}</div>;
 }

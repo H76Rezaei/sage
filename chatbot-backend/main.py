@@ -8,61 +8,65 @@ from llama.ChatBotClass import DigitalCompanion
 #from llama.prompt_manager import get_initial_prompts
 from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
-from speech import  voice_to_text , text_to_speech
-
-
+from speech import  voice_to_text , text_to_speech, new_tts, cashed
+from TTS.api import TTS
+from nltk.tokenize import sent_tokenize
+import os
 from pydub import AudioSegment
 from io import BytesIO
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 import ffmpeg
-#SYSTEM_PROMPT = """ You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs. While empathetic, prioritize understanding and addressing the user's intent clearly.
-#                    You are a conversational AI designed to engage with users in a friendly, supportive, and contextually appropriate way. 
-#                    - Respond empathetically if the user shares feelings, but avoid making assumptions about their emotions. 
-#                    - Ask clarifying questions to better understand the user's intent when needed.
-#                    - If the user states facts or seeks information, respond logically and concisely without overpersonalizing.
-#                    - Tailor your responses to align with the user's tone and avoid repetitive or irrelevant suggestions.
-#                    - Encourage natural conversation while staying focused on the user's inputs.
-#                    - Your responses should be brief, simple, and concise.
+from threading import Thread
+import time
+import io
+import wave
 
-#"""
 
-SYSTEM_PROMPT = """ You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs.
-                    You are a conversational AI designed to provide clear, concise, and contextually appropriate answers to user queries. Your goals are:
-                    - Treat each user input as a new topic unless explicitly connected to previous messages.
-                    - Avoid making assumptions that are not directly supported by the user's input.
-                    - Ask clarifying questions only when necessary, and avoid overexplaining.
-                    - Provide actionable, straightforward suggestions tailored to the user's immediate question.
-                    - Maintain a friendly and supportive tone without repeating irrelevant details.
-                    - If the user rejects your advice, gracefully move on to provide alternative suggestions or insights.
-                    - Avoid making assumptions about the user's needs and respect their boundaries.
+SYSTEM_PROMPT= """
+You are Sage, a conversational AI companion designed to assist elderly users with empathy and practical advice. Your role is to provide meaningful companionship while prioritizing the user’s input.
 
+- Respond directly to the user’s input and address their current topic or request concisely. 
+- Avoid long elaboration.
+- If the user changes the topic, fully transition to the new topic and do not revisit the previous one unless explicitly requested.
+- When the user thanks you or compliments you, acknowledge it with gratitude and ask the user if there's anything else you can help with.
+- If asked for your name or identity, clearly state that you are Sage and avoid confusion.
+- If the user refuses your suggestions or recommendations, move on from the topic and ask a default question such as "Is there anything I can further assist you with?"
+- When the user makes a request, prioritize providing actionable and practical suggestions directly. Avoid restating or revisiting previous topics unless explicitly asked.
+- Avoid starting responses with unnecessary reflections or redundant affirmations when a direct answer is required.
+- Avoid recommending location-based actions or services.
+- When responding to requests about starting new hobbies or activities, provide beginner-friendly, affordable, and accessible suggestions.
+- Avoid overly specific or prescriptive suggestions unless the user explicitly asks for them. Suggestions should be simple, general, and easy to personalize.  
+- Refrain from technological suggestions, the user is most likely an elderly individual who is not that comfortable with technology.
+- Avoid generating responses that start with "AI:" or "Bot:" and similar structures.
+- Avoid generating what the user says; your task is to respond meaningfully to their input.
 """
 
-#EMOTION_PROMPTS = {
-#        "joy": "The user is happy, match their energy, and try to get them to talk more about the source of their happiness",
-#        "sadness": "The user is sad, provide support and be an empathetic conversation partner",
-#        "anger": "It sounds like you're upset. Let me know how I can help.",
-#        "neutral": "Let’s continue our conversation in a balanced tone.",
-#        "confusion": "The user is feeling confused, try your best to help them explore their problem."
-#        # we gotta work on prompts more
-#    }
 
 
 EMOTION_PROMPTS = {
-    "joy": "Celebrate the user's happiness and encourage them to share more details about their positive experience.",
-    "sadness": "Acknowledge their feelings and provide brief, comforting responses without assumptions.",
-    "anger": "Respond calmly, and avoid unnecessary elaboration. Focus on resolving their concern quickly.",
-    "neutral": "Answer the user's query directly and maintain a balanced tone.",
-    "confusion": "Offer clear guidance and ask questions to clarify their needs. Avoid overexplaining."
+    "joy": "Celebrate the user's happiness with enthusiasm. Encourage them to share more about what’s bringing them joy. Reflect their positivity and strengthen the bond by sharing in their excitement.",
+    "sadness": " Respond with empathy. Be supportive. If the user shifts topics, fully engage with the new subject ",
+    "anger": "Respond calmly. Avoid unnecessary elaboration. Attempt to solve the users' concerns as quickly as possible. Be pragmatic and reasonable.",
+    "neutral": "Provide clear, direct answers to the user’s queries. Maintain a balanced and friendly tone. Ensure your responses are informative. ",
+    "confusion": "Offer clear guidance and advice. Use follow-up questions to clarify the user's needs and ensure they feel understood.",
+    "Grief": "Respond with empathy. Be supportive and gentle. Avoid revisiting or expanding on the topic unless the user explicitly continues. If the user shifts topics, fully engage with the new subject without returning to grief. ",
+    "annoyance":"Respond calmly and pragmatically. Acknowledge the user’s concerns. Avoid being defensive or dismissive. Work toward resolving the issue efficiently and respectfully",
+    "amusement": "Be friendly and make jokes.",
+    "curiosity": "Offer clear guidance and advice. Use follow-up questions to clarify the user's needs and ensure they feel understood.",
+    "disappointment": "",
+    "disapproval": "",
+    "surprise": "",
+    "remorse": "Encourage optimism and looking forward. Be wise. Encourage learning from mistakes. Be supportive.",
+    "relief": "",
+    "disgust": "",
+    "pride": ""
 }
-
-
-       
 
 
 
 chatbot = DigitalCompanion(SYSTEM_PROMPT, EMOTION_PROMPTS)
+tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
 
 #llama model and tokenizer
 #model, tokenizer = get_model_and_tokenizer()
@@ -111,6 +115,13 @@ async def convert_to_wav(audio: UploadFile):
         return output_audio
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
+    
+
+
+def convert_wav_to_mp3(wav_file, mp3_file):
+    audio = AudioSegment.from_wav(wav_file)
+    audio.export(mp3_file, format="mp3")
+
 
 @app.post("/conversation")
 async def conversation(request: Request):
@@ -131,47 +142,7 @@ async def conversation(request: Request):
     )
 
 
-@app.post("/voice-to-text")
-async def voice_to_text_endpoint(audio: UploadFile = File(...)):
-    """
-    Endpoint to convert audio to text.
-    """
-    try:
-        # Convert audio to WAV format first
-        wav_audio = await convert_to_wav(audio)
-
-        # Pass the WAV audio to voice_to_text function
-        stt_result = voice_to_text(wav_audio)
-        
-        # Log the result of the speech-to-text conversion
-        print(f"STT Result: {stt_result}")
-
-        if not stt_result["success"]:
-            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-
-        return JSONResponse(content={"text": stt_result["text"]})
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing the audio: {str(e)}")
-
-    
-@app.post("/text-to-speech")
-async def text_to_speech_endpoint(request: Request):
-    """
-    Endpoint to convert text to speech and return the audio file.
-    """
-    data = await request.json()
-    text = data.get("text")
-    if not text:
-        return JSONResponse(content={"error": "Text cannot be empty"}, status_code=400)
-
-    try:
-        output_filename = 'response.mp3'
-        text_to_speech(text, filename=output_filename)
-        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-
+#no streaming
 @app.post("/conversation-audio")
 async def conversation_audio(audio: UploadFile):
     """
@@ -197,16 +168,102 @@ async def conversation_audio(audio: UploadFile):
         # Ensure response_text is not empty
         if not response_text.strip():
             raise ValueError("No text to speak")
+        
+        # Generate speech using Coqui TTS
+        output_filename = "response.wav"
+        new_tts(response_text, filename=output_filename)
 
-        # Step 3: Convert Text Response to Speech
-        output_filename = "response.mp3"
-        text_to_speech(response_text, filename=output_filename)
+        # If needed, convert to MP3
+        output_mp3_filename = "response.mp3"
+        convert_wav_to_mp3(output_filename, output_mp3_filename)
 
-        # Step 4: Return the audio file generated
-        return FileResponse(output_filename, media_type='audio/mpeg', filename=output_filename)
+        # Return the MP3 file
+        return FileResponse(output_mp3_filename, media_type='audio/mpeg', filename=output_mp3_filename)
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+
+
+# attempted streaming but frontend difficulties
+# splits response into chunks
+@app.post("/conversation-audio-stream")
+async def conversation_audio_stream(audio: UploadFile):
+    temp_files = []  # Track temp files
+    try:
+        # Step 1: Convert Speech to Text
+        wav_audio = await convert_to_wav(audio)
+        stt_result = voice_to_text(wav_audio)
+        if not stt_result["success"]:
+            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
+        
+        user_input = stt_result["text"]
+        print(f"User said: {user_input}")
+        
+        # Step 2: Generate Text Response
+        response_text = ""
+        async for chunk in chatbot.process_input("default_user", user_input):
+            response_text += chunk
+        
+        # Tokenize into sentences
+        sentences = sent_tokenize(response_text)
+        print(f"Generated sentences: {sentences}")
+        
+        # Stream individual WAV chunks with controlled chunk size
+        async def generate_wav_chunks():
+            for i, sentence in enumerate(sentences):
+                temp_filename = f"chunk_{i}.wav"
+                temp_files.append(temp_filename)
+                
+                # Generate WAV file for each sentence
+                tts_model.tts_to_file(text=sentence, file_path=temp_filename)
+                
+                # Read the entire WAV file
+                with open(temp_filename, 'rb') as wav_file:
+                    chunk_data = wav_file.read()
+                    
+                    # Split large chunks into smaller, manageable sizes
+                    max_chunk_size = 100 * 1024  # 100 KB chunks
+                    for j in range(0, len(chunk_data), max_chunk_size):
+                        chunk = chunk_data[j:j+max_chunk_size]
+                        
+                        # Ensure first chunk keeps the WAV header
+                        if j == 0:
+                            print(f"Chunk {i}-{j} size: {len(chunk)} bytes")
+                            print(f"First 20 bytes: {chunk[:20]}")
+                            print(f"Is valid WAV: {chunk[:4] == b'RIFF'}")
+                            yield chunk
+                        else:
+                            # For subsequent chunks, only yield the audio data
+                            yield chunk
+
+                time.sleep(0.01)  # Short delay for the generator to finish reading
+                try:
+                    os.remove(temp_filename)
+                    print(f"Deleted {temp_filename}")
+                except OSError as e:
+                    print(f"Error deleting {temp_filename}: {e}")
+        
+        # Return a streaming response with individual WAV chunks
+        return StreamingResponse(
+            generate_wav_chunks(), 
+            media_type="audio/wav"
+        )
+    
+    
+    except Exception as e:    
+        print(f"Error in audio processing: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+    finally:
+        # Clean up temporary files
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except Exception as cleanup_error:
+                print(f"Error cleaning up temp file {temp_file}: {cleanup_error}")
+
+
 
 if __name__ == "__main__":
     import uvicorn

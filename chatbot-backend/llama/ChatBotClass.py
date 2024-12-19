@@ -16,7 +16,7 @@ from emotion_detection.go_emotions import EmotionDetector   ## it should be inst
 
 class DigitalCompanion:
     
-    def __init__(self, template, emotion_prompts, model_name="llama3.2:1b", temperature=0.4, top_p=0.7, max_tokens=100, max_tokens_limit=1500, max_history_length=3):
+    def __init__(self, template, emotion_prompts, model_name="llama3.2:1b", temperature=0.7, top_p=0.9, max_tokens=100, max_tokens_limit=1500, max_history_length=3):
         
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         self.llm = ChatOllama(model=model_name, temperature=temperature, max_tokens=max_tokens, device=device, stream=True)
