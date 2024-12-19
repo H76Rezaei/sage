@@ -3,18 +3,14 @@ export async function sendAudioToBackend(audioBlob) {
   const formData = new FormData();
   formData.append("audio", audioBlob, "audio.wav");
 
-  // More sophisticated playback queue
   const playbackQueue = [];
   let isPlaying = false;
-  let currentChunk = null;
-  let chunkCounter = 0;
 
   const playNextChunk = () => {
     if (playbackQueue.length === 0) {
       isPlaying = false;
       return;
     }
-
     isPlaying = true;
     const audioBlob = playbackQueue.shift();
     const audioUrl = URL.createObjectURL(audioBlob);
@@ -37,73 +33,51 @@ export async function sendAudioToBackend(audioBlob) {
     if (!response.body) throw new Error("No readable stream in response");
 
     const reader = response.body.getReader();
-    let headerCount = 0;
-    let lastHeaderPosition = -1;
+    let accumulatedData = new Uint8Array();
+    let chunkCounter = 0;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      if (value.byteLength > 0) {
-        // More sophisticated WAV header detection
-        const isWavHeader = (
-          value[0] === 82 &&   // R
-          value[1] === 73 &&   // I
-          value[2] === 70 &&   // F
-          value[3] === 70      // F
-        );
+      if (value && value.byteLength > 0) {
+        const combinedData = new Uint8Array(accumulatedData.length + value.length);
+        combinedData.set(accumulatedData, 0);
+        combinedData.set(value, accumulatedData.length);
+        accumulatedData = combinedData;
 
-        if (isWavHeader) {
-          headerCount++;
-          
-          // If this is not the first header, process the previous chunk
-          if (headerCount > 1 && currentChunk) {
-            console.log(`Processing chunk before header #${headerCount}`);
-            const chunkBlob = new Blob([currentChunk], { type: "audio/wav" });
-            playbackQueue.push(chunkBlob);
-            
-            if (!isPlaying) {
-              playNextChunk();
+        let startIndex = 0;
+        while (startIndex < accumulatedData.length) {
+          const isWavHeader =
+            accumulatedData[startIndex] === 82 && // R
+            accumulatedData[startIndex + 1] === 73 && // I
+            accumulatedData[startIndex + 2] === 70 && // F
+            accumulatedData[startIndex + 3] === 70; // F
+
+          if (isWavHeader) {
+            let dataLength = accumulatedData.length - startIndex;
+            if (dataLength >= 8) { // Check for minimum RIFF header size
+              const riffChunkSize = new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8; // Read chunk size
+              if (dataLength >= riffChunkSize) {
+                const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
+                const chunkBlob = new Blob([wavData], { type: "audio/wav" });
+                playbackQueue.push(chunkBlob);
+                if (!isPlaying) playNextChunk();
+
+                startIndex += riffChunkSize;
+                continue; // Process next WAV in accumulated data
+              }
             }
           }
-
-          // Reset current chunk to new WAV header
-          currentChunk = value;
-          lastHeaderPosition = chunkCounter;
-        } else {
-          // Append to current chunk if it exists
-          if (currentChunk) {
-            const combinedChunk = new Uint8Array([...currentChunk, ...value]);
-            currentChunk = combinedChunk;
-          } else {
-            console.warn(`Received non-header chunk without preceding header at chunk ${chunkCounter}`);
-            continue;
-          }
+          break; // No more complete WAV files found
         }
-
-        // Debug logging
-        console.log(`Chunk ${chunkCounter++}:`, {
-          byteLength: value.byteLength,
-          isWavHeader: isWavHeader,
-          headerCount: headerCount
-        });
+        accumulatedData = accumulatedData.subarray(startIndex); // Remove processed data
+        console.log(`Chunk ${chunkCounter++}:`, { byteLength: value.byteLength });
       }
     }
 
-    // Process final chunk
-    if (currentChunk) {
-      const finalChunkBlob = new Blob([currentChunk], { type: "audio/wav" });
-      playbackQueue.push(finalChunkBlob);
-      
-      if (!isPlaying) {
-        playNextChunk();
-      }
-    }
-
-    console.log("All audio chunks have been processed.");
-    console.log(`Total headers found: ${headerCount}`);
-    console.log(`Total chunks processed: ${chunkCounter}`);
+    console.log("All audio chunks processed.");
   } catch (error) {
-    console.error("Error streaming audio from backend:", error);
+    console.error("Error streaming audio:", error);
   }
 }
