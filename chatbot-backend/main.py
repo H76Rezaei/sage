@@ -235,12 +235,20 @@ async def conversation_audio_stream(audio: UploadFile):
                         else:
                             # For subsequent chunks, only yield the audio data
                             yield chunk
+
+                time.sleep(0.01)  # Short delay for the generator to finish reading
+                try:
+                    os.remove(temp_filename)
+                    print(f"Deleted {temp_filename}")
+                except OSError as e:
+                    print(f"Error deleting {temp_filename}: {e}")
         
         # Return a streaming response with individual WAV chunks
         return StreamingResponse(
             generate_wav_chunks(), 
             media_type="audio/wav"
         )
+    
     
     except Exception as e:    
         print(f"Error in audio processing: {str(e)}")
