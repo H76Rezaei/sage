@@ -16,7 +16,7 @@ export async function sendAudioToBackend(audioBlob) {
     return response;
   } catch (error) {
     console.error("Error:", error);
-    alert(`Error: ${error.message}`);
+    //alert(`Error: ${error.message}`);
     throw error;
   }
 }
