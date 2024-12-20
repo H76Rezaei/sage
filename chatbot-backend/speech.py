@@ -9,6 +9,8 @@ from nltk.tokenize import sent_tokenize
 import torch
 from pydub import AudioSegment
 
+import whisper
+
 def get_device():
     if torch.cuda.is_available():
         return "cuda"
@@ -24,25 +26,58 @@ tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
 #list available speakers
 print("Available speakers:", tts_model.speakers)
 
+
+# Load the Whisper model (choose 'tiny', 'base', 'small', 'large')
+model = whisper.load_model("small")
+
+
 def voice_to_text(audio_data: BytesIO):
     """
-    Convert audio to text using SpeechRecognition.
+    Convert audio to text using OpenAI's Whisper model.
     """
-    recognizer = sr.Recognizer()
-
-    # Use the BytesIO object directly
     try:
-        with sr.AudioFile(audio_data) as source:
-            print("Recognizing speech...")
-            audio_recorded = recognizer.record(source)
-            text = recognizer.recognize_google(audio_recorded)
+        # Save the audio data to a temporary file
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_data.getvalue())
+
+        # Use the Whisper model to transcribe the audio
+        print("Recognizing speech using Whisper...")
+        result = model.transcribe("temp_audio.wav")
+        text = result.get("text", "")
+
+        # Clean up temporary file
+        os.remove("temp_audio.wav")
+
+        if text:
             return {"success": True, "text": text}
-    except sr.UnknownValueError:
-        return {"success": False, "error": "Could not understand the audio."}
-    except sr.RequestError as e:
-        return {"success": False, "error": f"Could not request results from Google Speech Recognition service; {str(e)}"}
+        else:
+            return {"success": False, "error": "Could not recognize text from audio."}
+
     except Exception as e:
-        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+        return {"success": False, "error": f"An error occurred: {str(e)}"}
+
+
+
+
+# def voice_to_text(audio_data: BytesIO):
+#     """
+#     Convert audio to text using SpeechRecognition.
+#     """
+#     recognizer = sr.Recognizer()
+
+#     # Use the BytesIO object directly
+#     try:
+#         with sr.AudioFile(audio_data) as source:
+#             print("Recognizing speech...")
+#             audio_recorded = recognizer.record(source)
+#             text = recognizer.recognize_google(audio_recorded)
+#             return {"success": True, "text": text}
+#     except sr.UnknownValueError:
+#         return {"success": False, "error": "Could not understand the audio."}
+#     except sr.RequestError as e:
+#         return {"success": False, "error": f"Could not request results from Google Speech Recognition service; {str(e)}"}
+#     except Exception as e:
+#         return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
 
 
 def text_to_speech(text, filename='response.mp3', play_sound=False):
