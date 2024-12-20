@@ -56,38 +56,35 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         const detectSilence = () => {
           analyser.getByteFrequencyData(dataArray);
           const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-
-          // Detect meaningful speech and start silence detection
+      
           if (avgVolume > volumeThreshold) {
-            userSpeakingRef.current = true; // User started speaking
-            silenceDetectionStartedRef.current = true; // Start silence detection
-
-            // If bot is responding, interrupt it
-            if (botAudioRef.current) {
+            userSpeakingRef.current = true;
+            silenceDetectionStartedRef.current = true;
+      
+            // Interrupt bot if playing
+            if (botAudioRef.current && !botAudioRef.current.paused) { // Check if not paused
               botAudioRef.current.pause();
               botAudioRef.current.currentTime = 0;
               setStatusText('Listening...');
               setInterruptMessage('');
             }
-
-            // Clear the silence timeout if the user is speaking
+      
             clearTimeout(silenceTimeoutRef.current);
             silenceTimeoutRef.current = null;
           }
-
-          // Detect silence only if user has started speaking
+      
           if (silenceDetectionStartedRef.current && avgVolume <= volumeThreshold) {
             if (!stopFlagRef.current && silenceTimeoutRef.current === null) {
               silenceTimeoutRef.current = setTimeout(() => {
                 if (silenceDetectionStartedRef.current) {
                   console.log("Silence detected, stopping recording...");
-                  stopRecordingAndProcess(); // Stop recording and process
-                  silenceDetectionStartedRef.current = false; // Reset silence detection flag
+                  stopRecordingAndProcess();
+                  silenceDetectionStartedRef.current = false;
                 }
-              }, 2000); // Stop after 2 seconds of silence
+              }, 2000);
             }
           }
-
+      
           requestAnimationFrame(detectSilence);
         };
 
@@ -193,14 +190,102 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
   async function sendAudioToConversationEndpoint(audioBlob) {
     try {
-      await sendAudioToBackend(audioBlob); // Pass the blob to the backend for processing
-      console.log("Audio chunks enqueued for playback.");
+        const response = await sendAudioToBackend(audioBlob);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Backend error: ${response.status} - ${errorText}`);
+            setChatHistory((prev) => [
+                ...prev,
+                { type: "text", sender: "bot", content: `Error: ${errorText || response.statusText}` },
+            ]);
+            return;
+        }
+
+        const reader = response.body.getReader();
+        let accumulatedData = new Uint8Array();
+        const playbackQueue = [];
+        let isPlaying = false;
+
+        const playNextChunk = () => {
+            if (playbackQueue.length === 0) {
+                isPlaying = false;
+                botAudioRef.current = null;
+                return;
+            }
+            isPlaying = true;
+            const audioBlob = playbackQueue.shift();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            botAudioRef.current = audio;
+
+            audio.play().catch(error => {
+                console.error("Error playing audio chunk:", error);
+                URL.revokeObjectURL(audioUrl);
+                playNextChunk();
+                botAudioRef.current = null;
+            });
+
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                playNextChunk();
+            };
+        };
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            if (value && value.byteLength > 0) {
+                const combinedData = new Uint8Array(accumulatedData.length + value.length);
+                combinedData.set(accumulatedData, 0);
+                combinedData.set(value, accumulatedData.length);
+                accumulatedData = combinedData;
+
+                let startIndex = 0;
+                while (startIndex < accumulatedData.length) {
+                    const isWavHeader =
+                        accumulatedData[startIndex] === 82 &&
+                        accumulatedData[startIndex + 1] === 73 &&
+                        accumulatedData[startIndex + 2] === 70 &&
+                        accumulatedData[startIndex + 3] === 70;
+
+                    if (isWavHeader) {
+                        let dataLength = accumulatedData.length - startIndex;
+                        if (dataLength >= 8) {
+                            const riffChunkSize = new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
+                            if (dataLength >= riffChunkSize) {
+                                const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
+                                const chunkBlob = new Blob([wavData], { type: "audio/wav" });
+                                playbackQueue.push(chunkBlob);
+                                // Add to chat history *immediately* after pushing to playbackQueue:
+                                const botAudioUrl = URL.createObjectURL(chunkBlob); //Create URL right after the blob is created
+                                setChatHistory((prev) => [
+                                    ...prev,
+                                    { type: "audio", sender: "bot", content: botAudioUrl },
+                                ]);
+                                if (!isPlaying) playNextChunk();
+
+                                startIndex += riffChunkSize;
+                                continue;
+                            }
+                        }
+                    }
+                    break;
+                }
+                accumulatedData = accumulatedData.subarray(startIndex);
+            }
+        }
+
+        console.log("All audio chunks processed.");
     } catch (error) {
-      console.error("Error processing audio in conversation endpoint:", error);
-      throw error;
+        console.error("Error streaming audio:", error);
+        setChatHistory((prev) => [
+            ...prev,
+            { type: "text", sender: "bot", content: "Error processing bot response" },
+        ]);
     }
-  }
-  
+}
   
 
   const defaultOptions = {
