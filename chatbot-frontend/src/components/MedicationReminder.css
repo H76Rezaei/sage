@@ -1,9 +1,8 @@
-/* MedicationReminder.css */
+/* General container styles */
 .medication-reminder-container {
   width: 80%;
   margin: 0 auto;
   padding: 2rem;
-
   border-radius: 12px;
 }
 
@@ -117,4 +116,107 @@
 
 .delete-button:hover {
   background-color: #c53030;
+}
+
+@media (max-width: 768px) {
+  .medication-reminder-container {
+    padding: 1.5rem;
+  }
+
+  .header-title {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .input-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .input-label {
+    width: auto;
+    margin-bottom: 0.5rem;
+  }
+
+  .input {
+    width: 100%;
+  }
+
+  .time-repeat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .add-button {
+    width: 100%;
+    padding: 1rem 1.5rem;
+  }
+
+  .medication-items {
+    padding-left: 1rem;
+  }
+
+  .medication-item {
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .medication-name,
+  .medication-time,
+  .medication-repeat {
+    font-size: 1rem;
+  }
+
+  .delete-button {
+    width: 100%;
+    padding: 0.5rem;
+  }
+}
+
+/* For mobile devices with max width of 480px */
+@media (max-width: 480px) {
+  .medication-reminder-container {
+    padding: 1rem;
+  }
+
+  .header-title {
+    font-size: 1.5rem;
+  }
+
+  .input-group {
+    width: 100%;
+  }
+
+  .input-label {
+    font-size: 0.9rem;
+  }
+
+  .input {
+    font-size: 0.9rem;
+  }
+
+  .add-button {
+    font-size: 1.2rem;
+  }
+
+  .medications-list h2 {
+    font-size: 1.25rem;
+  }
+
+  .medication-item {
+    padding: 0.8rem;
+  }
+
+  .medication-name,
+  .medication-time,
+  .medication-repeat {
+    font-size: 0.9rem;
+  }
+
+  .delete-button {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+  }
 }

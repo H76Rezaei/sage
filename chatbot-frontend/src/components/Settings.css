@@ -10,7 +10,6 @@
   transition: all 0.3s ease;
 }
 
-/* Title */
 .settings-container h1 {
   font-size: 2.5rem;
   margin-bottom: 2rem;
@@ -20,7 +19,6 @@
   font-weight: bold;
 }
 
-/* Section for font-related settings */
 .font h3 {
   font-size: 1.6rem;
   text-align: center;
@@ -28,7 +26,6 @@
   margin-bottom: 2rem;
 }
 
-/* General font and voice sections */
 .font,
 .voice {
   margin: 2rem;
@@ -38,7 +35,6 @@
   border-bottom: solid 1px;
 }
 
-/* Items within the settings container */
 .settings-item {
   margin-bottom: 1.5rem;
   display: flex;
@@ -46,14 +42,12 @@
   align-items: center;
 }
 
-/* Labels for select inputs */
 .settings-item label {
   font-size: 1.2rem;
   color: #2d3748;
   font-weight: 500;
 }
 
-/* Select dropdown styling */
 .settings-select {
   padding: 0.6rem;
   border-radius: 8px;
@@ -71,7 +65,6 @@
   outline: none;
 }
 
-/* Button styling */
 .save-button {
   width: 50%;
   padding: 0.85rem;
@@ -110,12 +103,43 @@
     align-items: flex-start;
   }
 
+  .settings-item label {
+    margin-bottom: 0.5rem;
+  }
+
   .settings-select {
     width: 100%;
+    margin-bottom: 1rem;
   }
 
   .save-button {
     width: 100%;
     margin-left: 0;
+  }
+
+  .font h3 {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-container {
+    padding: 1rem;
+  }
+
+  .settings-container h1 {
+    font-size: 1.8rem;
+  }
+
+  .settings-item label {
+    font-size: 1rem;
+  }
+
+  .settings-select {
+    font-size: 1rem;
+  }
+
+  .save-button {
+    font-size: 1.1rem;
   }
 }

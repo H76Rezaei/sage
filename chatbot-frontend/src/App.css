@@ -1,7 +1,6 @@
 /* App.css */
 .app-container {
   display: flex;
-  flex-direction: row;
   height: 100vh;
   margin: 0;
   overflow: hidden;
@@ -10,9 +9,17 @@
 
 .content {
   flex: 1;
-  height: 100%;
   padding: 1rem;
   overflow-y: auto;
   background-color: #ffffff;
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    padding: 0.5rem;
+  }
 }

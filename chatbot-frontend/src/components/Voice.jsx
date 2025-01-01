@@ -305,9 +305,7 @@ const Voice = ({
   return (
     <div className="voice-chat-container">
       <p className="status-text pulse">{statusText}</p>{" "}
-      {/* Status text with pulse */}
       <p className="interrupt-text">{interruptMessage}</p>{" "}
-      {/* Interrupt message */}
       <div className="listening-indicator">
         <Lottie options={defaultOptions} height={300} width={300} />
       </div>

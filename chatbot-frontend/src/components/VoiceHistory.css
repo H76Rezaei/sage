@@ -2,7 +2,7 @@
   height: 100vh;
   max-height: 100vh;
   width: 100%;
-  max-width: 480px; /* Mobile width */
+  max-width: 480px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

@@ -1,11 +1,11 @@
+/* General chat container */
 .chat-container {
-  height: 100vh;
+  height: 95vh;
   max-width: 900px;
   margin: 0 auto;
   margin-bottom: 3rem;
   display: flex;
   flex-direction: column;
-
   border-radius: 12px;
   overflow: hidden;
 }
@@ -120,4 +120,83 @@
 .send-button svg {
   width: 20px;
   height: 20px;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .chat-header h1 {
+    font-size: 1.125rem;
+  }
+
+  .messages-container {
+    padding: 0.75rem;
+  }
+
+  .input-container {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .input-container input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .send-button {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .message {
+    max-width: 80%;
+    font-size: 0.875rem;
+  }
+
+  .user-message {
+    max-width: 85%;
+  }
+
+  .bot-message {
+    max-width: 85%;
+  }
+}
+
+/* For screens less than 480px (Small Mobile View) */
+@media (max-width: 480px) {
+  .chat-header h1 {
+    font-size: 1rem;
+  }
+
+  .message {
+    max-width: 90%;
+    font-size: 0.875rem;
+  }
+
+  .send-button svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* For large screens (tablets and larger) */
+@media (min-width: 1024px) {
+  .chat-container {
+    max-width: 900px;
+  }
+
+  .message {
+    max-width: 70%;
+  }
+
+  .user-message {
+    max-width: 75%;
+  }
+
+  .bot-message {
+    max-width: 75%;
+  }
 }

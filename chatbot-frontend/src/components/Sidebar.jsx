@@ -1,44 +1,51 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import "./Sidebar.css"; // Import the CSS file
+import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? "open" : ""}`}>
+      {/* Close Button for Mobile */}
+      {isOpen && (
+        <button className="closeButton" onClick={toggleSidebar}>
+          ×
+        </button>
+      )}
+
       <div className="topSection">
         <ul className="menu">
           <li>
-            <Link to="/" className="link">
+            <Link to="/" className="link" onClick={toggleSidebar}>
               🏠 Home
             </Link>
           </li>
           <li>
-            <Link to="/chat" className="link">
+            <Link to="/chat" className="link" onClick={toggleSidebar}>
               💬 Chat with Me
             </Link>
           </li>
           <li>
-            <Link to="/voice" className="link">
+            <Link to="/voice" className="link" onClick={toggleSidebar}>
               🗣️ Talk to Me
             </Link>
           </li>
           <li>
-            <Link to="/settings" className="link">
+            <Link to="/settings" className="link" onClick={toggleSidebar}>
               ⚙️ Settings
             </Link>
           </li>
           <li>
-            <Link to="/reminders" className="link">
+            <Link to="/reminders" className="link" onClick={toggleSidebar}>
               💊 Medication Reminders
             </Link>
           </li>
           <li>
-            <Link to="/about" className="link">
+            <Link to="/about" className="link" onClick={toggleSidebar}>
               📜 About Me
             </Link>
           </li>
           <li>
-            <Link to="/contact" className="link">
+            <Link to="/contact" className="link" onClick={toggleSidebar}>
               📞 Contact Us
             </Link>
           </li>

@@ -2,43 +2,41 @@
   height: 100vh;
   max-height: 100vh;
   width: 100%;
-  max-width: 480px; /* Mobile width */
+  max-width: 480px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center content vertically */
-  align-items: center; /* Center content horizontally */
+  justify-content: center;
+  align-items: center;
 
-  position: relative; /* Keep relative for absolutely positioned elements */
+  position: relative;
 }
 
-/* Listening Indicator */
 .listening-indicator {
   display: flex;
   justify-content: center;
   align-items: center;
-  /*margin: 0 auto;*/
-  flex-grow: 0; /* Take up remaining space to center it */
+
+  flex-grow: 0;
 }
 
-/* Stop Button */
 .stop-button {
-  position: absolute; /* Fix it to the bottom of the container */
+  position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: none; /* Remove background */
-  border: none; /* Remove border */
-  font-size: 3rem; /* Adjust size for visibility */
-  color: black; /* Adjust color */
+  background: none;
+  border: none;
+  font-size: 3rem;
+  color: black;
   cursor: pointer;
 }
 .stop-button svg {
-  transform: scale(1.5); /* Scales the SVG 1.5x larger */
+  transform: scale(1.5);
 }
 
 .stop-button:hover {
-  transform: translateX(-50%) translateY(-1px); /* Ensure consistent centering on hover */
+  transform: translateX(-50%) translateY(-1px);
   box-shadow: 0 4px 6px rgba(18, 8, 151, 0.1);
 }
 /* Status Text */
@@ -48,7 +46,7 @@
   animation: pulse 1.5s infinite;
   position: relative;
   transform: scale(1.1);
-  bottom: 1px; /* Move it closer to the element below */
+  bottom: 1px;
 }
 @keyframes pulse {
   0% {
@@ -66,7 +64,7 @@
   color: rgb(59, 28, 170);
   animation: pulse 1.5s infinite;
   position: relative;
-  bottom: 1px; /* Move it closer to the element below */
+  bottom: 1px;
 }
 @keyframes pulse {
   0% {

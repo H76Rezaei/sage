@@ -19,7 +19,7 @@ const TextChat = ({
       const userMessage = {
         text: message,
         sender: "user",
-        id: Date.now(), // Unique identifier for each message
+        id: Date.now(),
       };
 
       // Add user message to chat history
@@ -29,11 +29,10 @@ const TextChat = ({
       const currentMessage = message;
       setMessage("");
       setIsTyping(true);
-      streamedResponseRef.current = ""; // Reset streamed response
+      streamedResponseRef.current = "";
 
       try {
         await sendConversation(currentMessage, (streamData) => {
-          // Accumulate response if it exists
           if (streamData.response) {
             streamedResponseRef.current += streamData.response;
           }
@@ -67,7 +66,6 @@ const TextChat = ({
             return newHistory;
           });
 
-          // Save to history only when final
           if (streamData.is_final) {
             saveToHistory({
               text: streamedResponseRef.current,
@@ -92,7 +90,6 @@ const TextChat = ({
 
   return (
     <div className="chat-container">
-      {/* Header */}
       <div className="chat-header">
         <button className="back-button" onClick={() => onSelectOption(null)}>
           <ArrowLeft />
@@ -100,7 +97,6 @@ const TextChat = ({
         <h1>Text Chat</h1>
       </div>
 
-      {/* Chat Messages */}
       <div className="messages-container">
         {chatHistory.map((msg, index) => (
           <div
@@ -115,7 +111,6 @@ const TextChat = ({
         ))}
       </div>
 
-      {/* Input Area */}
       <div className="input-container">
         <input
           type="text"

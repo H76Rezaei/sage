@@ -54,12 +54,19 @@ function App() {
       setFontFamily(savedFontFamily);
     }
   }, []);
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   return (
     <Router>
       <div className="app-container">
-        {/* Sidebar navigation */}
-        <Sidebar />
+        <div className="hamburger-menu" onClick={toggleSidebar}>
+          ☰
+        </div>
+
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+
         <div className="content">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -93,14 +100,8 @@ function App() {
               path="/settings"
               element={<Settings applySettings={applySettings} />}
             />
-            <Route
-              path="/about"
-              element={<AboutMe />} // Add AboutMe Route
-            />
-            <Route
-              path="/reminders"
-              element={<MedicationReminder />} // Add Medication Reminder Route
-            />
+            <Route path="/about" element={<AboutMe />} />
+            <Route path="/reminders" element={<MedicationReminder />} />
           </Routes>
         </div>
       </div>
