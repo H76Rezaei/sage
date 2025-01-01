@@ -1,0 +1,120 @@
+/* MedicationReminder.css */
+.medication-reminder-container {
+  width: 80%;
+  margin: 0 auto;
+  padding: 2rem;
+
+  border-radius: 12px;
+}
+
+.header-title {
+  color: #2c5282;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: solid 1px #3182ce;
+  padding: 1rem;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.input-label {
+  color: #333;
+  font-size: 1rem;
+  font-weight: bold;
+  width: 150px;
+}
+
+.input {
+  flex: 1;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  transition: border 0.3s;
+}
+
+.input:focus {
+  border-color: #3182ce;
+}
+
+.add-button {
+  align-self: center;
+  margin-top: 1rem;
+  padding: 0.8rem 1.5rem;
+  background-color: #3487d4;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 1.5rem;
+}
+
+.add-button:hover {
+  background-color: #2b6cb0;
+}
+
+.time-repeat-group {
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+}
+
+.medications-list {
+  margin-top: 2rem;
+  border-top: solid 1px #ddd;
+}
+
+.medications-list h2 {
+  font-size: 1.5rem;
+  color: #2c5282;
+  margin-top: 2rem;
+}
+
+.medication-items {
+  list-style-type: none;
+  padding: 0;
+}
+
+.medication-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #fff;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.medication-name,
+.medication-time,
+.medication-repeat {
+  font-size: 1rem;
+  color: #333;
+}
+
+.delete-button {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.delete-button:hover {
+  background-color: #c53030;
+}

@@ -1,0 +1,81 @@
+.voice-chat-container {
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  max-width: 480px; /* Mobile width */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center content vertically */
+  align-items: center; /* Center content horizontally */
+
+  position: relative; /* Keep relative for absolutely positioned elements */
+}
+
+/* Listening Indicator */
+.listening-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /*margin: 0 auto;*/
+  flex-grow: 0; /* Take up remaining space to center it */
+}
+
+/* Stop Button */
+.stop-button {
+  position: absolute; /* Fix it to the bottom of the container */
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: none; /* Remove background */
+  border: none; /* Remove border */
+  font-size: 3rem; /* Adjust size for visibility */
+  color: black; /* Adjust color */
+  cursor: pointer;
+}
+.stop-button svg {
+  transform: scale(1.5); /* Scales the SVG 1.5x larger */
+}
+
+.stop-button:hover {
+  transform: translateX(-50%) translateY(-1px); /* Ensure consistent centering on hover */
+  box-shadow: 0 4px 6px rgba(18, 8, 151, 0.1);
+}
+/* Status Text */
+.status-text {
+  font-size: 1.5rem;
+  color: rgb(59, 28, 170);
+  animation: pulse 1.5s infinite;
+  position: relative;
+  transform: scale(1.1);
+  bottom: 1px; /* Move it closer to the element below */
+}
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+.interrupt-text {
+  font-size: 1.5rem;
+  color: rgb(59, 28, 170);
+  animation: pulse 1.5s infinite;
+  position: relative;
+  bottom: 1px; /* Move it closer to the element below */
+}
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,121 @@
+/* General container styles */
+.settings-container {
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 1000px;
+  margin: 2rem auto;
+  font-family: "Arial", sans-serif;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Title */
+.settings-container h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: #2c5282;
+  border-bottom: 2px solid #3182ce;
+  padding-bottom: 1rem;
+  font-weight: bold;
+}
+
+/* Section for font-related settings */
+.font h3 {
+  font-size: 1.6rem;
+  text-align: center;
+  color: #2c5282;
+  margin-bottom: 2rem;
+}
+
+/* General font and voice sections */
+.font,
+.voice {
+  margin: 2rem;
+}
+
+.font {
+  border-bottom: solid 1px;
+}
+
+/* Items within the settings container */
+.settings-item {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Labels for select inputs */
+.settings-item label {
+  font-size: 1.2rem;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+/* Select dropdown styling */
+.settings-select {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #a0aec0;
+  font-size: 1.1rem;
+  background-color: #edf2f7;
+  color: #2d3748;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  width: 55%;
+}
+
+.settings-select:focus {
+  border-color: #3182ce;
+  background-color: #ffffff;
+  outline: none;
+}
+
+/* Button styling */
+.save-button {
+  width: 50%;
+  padding: 0.85rem;
+  background-color: #3182ce;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 3rem;
+  margin-left: 25%;
+}
+
+.save-button:hover {
+  background-color: #2b6cb0;
+  transform: translateY(-3px);
+}
+
+.save-button:active {
+  transform: translateY(1px);
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 1.5rem;
+  }
+
+  .settings-container h1 {
+    font-size: 2rem;
+  }
+
+  .settings-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-select {
+    width: 100%;
+  }
+
+  .save-button {
+    width: 100%;
+    margin-left: 0;
+  }
+}
