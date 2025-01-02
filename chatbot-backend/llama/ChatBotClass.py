@@ -98,8 +98,8 @@ class DigitalCompanion:
             embedding=self.embeddings,
             namespace="chatbot"
         )
-
-        def create_session(self, user_id):
+            
+    def create_session(self, user_id):
         """Create a new session with balanced memory management."""
         buffer_memory = ConversationBufferMemory(
             return_messages=True,
@@ -124,7 +124,6 @@ class DigitalCompanion:
                 "recent_conversation": recent_conversation[-6:],
                 "long_term_memory": []  # Long-term memory will be handled in process_input
             }
-
         chain = (
             RunnablePassthrough.assign(
                 recent_conversation=lambda x: get_memory(x)["recent_conversation"],
@@ -142,6 +141,7 @@ class DigitalCompanion:
         }
         
         print(f"Session created for user {user_id}")
+        
 
     async def summarize_context(self, messages: List[BaseMessage]) -> Dict:
         """Generate summary of conversation context."""
@@ -153,6 +153,7 @@ class DigitalCompanion:
         summary = await self.summary_chain.arun(combined_text)
     
         return summary
+
     async def process_input(self, user_id, user_input):
         """Process user input with balanced context management."""
         if user_id not in self.sessions:
@@ -247,7 +248,7 @@ class DigitalCompanion:
                 texts=[summary],
                 metadatas=[{
                     "user_id": user_id,
-                    "timestamp": time.timet(),
+                    "timestamp": time.time(),
                     "type": "summary"
                 }],
                 namespace="chatbot-summaries"
