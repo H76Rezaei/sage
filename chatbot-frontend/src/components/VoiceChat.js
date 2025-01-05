@@ -158,37 +158,29 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
   const handleDataAvailable = async (event) => {
     if (stopFlagRef.current) return;
-  
+
     if (event.data.size > 0) {
-      const audioBlob = new Blob([event.data], { type: "audio/webm" });
-  
-      if (audioBlob.size > 1000) {
-        console.log("User audio recorded:", audioBlob);
-        setChatHistory((prev) => [
-          ...prev,
-          { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
-        ]);
-  
-        try {
-          await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
-          startRecording(); // Restart recording after bot response
-        } catch (error) {
-          console.error("Error handling bot audio:", error);
-          cleanup();
+        const audioBlob = new Blob([event.data], { type: "audio/webm" });
+
+        if (audioBlob.size > 1000) {
+            console.log("User audio recorded:", audioBlob);
+            setChatHistory((prev) => [
+                ...prev,
+                { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
+            ]);
+
+            try {
+                await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
+                startRecording(); // Restart recording after bot response
+            } catch (error) {
+                console.error("Error handling bot audio:", error);
+                cleanup();
+            }
         }
-      }
     }
-  };
-  
-  
-  
-  
+};
 
-  const handleStop = () => {
-    // Reset logic can go here if needed
-  };
-
-  async function sendAudioToConversationEndpoint(audioBlob) {
+async function sendAudioToConversationEndpoint(audioBlob) {
     try {
         const response = await sendAudioToBackend(audioBlob);
 

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
@@ -21,6 +21,7 @@ from threading import Thread
 import time
 import io
 import wave
+import asyncio
 
 
 SYSTEM_PROMPT= """
@@ -187,8 +188,15 @@ async def conversation_audio(audio: UploadFile):
 # attempted streaming but frontend difficulties
 # splits response into chunks
 @app.post("/conversation-audio-stream")
-async def conversation_audio_stream(audio: UploadFile):
+async def conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
     temp_files = []  # Track temp files
+    cancel_event = asyncio.Event()
+
+    def cancel_previous_task():
+        cancel_event.set()
+
+    background_tasks.add_task(cancel_previous_task)
+
     try:
         # Step 1: Convert Speech to Text
         wav_audio = await convert_to_wav(audio)
@@ -202,6 +210,9 @@ async def conversation_audio_stream(audio: UploadFile):
         # Step 2: Generate Text Response
         response_text = ""
         async for chunk in chatbot.process_input("default_user", user_input):
+            if cancel_event.is_set():
+                print("Processing cancelled")
+                return
             response_text += chunk
         
         # Tokenize into sentences
@@ -211,6 +222,9 @@ async def conversation_audio_stream(audio: UploadFile):
         # Stream individual WAV chunks with controlled chunk size
         async def generate_wav_chunks():
             for i, sentence in enumerate(sentences):
+                if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return
                 temp_filename = f"chunk_{i}.wav"
                 temp_files.append(temp_filename)
                 
