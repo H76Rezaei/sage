@@ -184,8 +184,7 @@ async def conversation_audio(audio: UploadFile):
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
 
 
-# attempted streaming but frontend difficulties
-# splits response into chunks
+#streaming
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile):
     temp_files = []  # Track temp files
