@@ -221,47 +221,29 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         
         # Stream individual WAV chunks with controlled chunk size
         async def generate_wav_chunks():
-            for i, sentence in enumerate(sentences):
-                if cancel_event.is_set():
-                    print("Chunk generation cancelled")
-                    return
-                temp_filename = f"chunk_{i}.wav"
-                temp_files.append(temp_filename)
-                
-                # Generate WAV file for each sentence
-                tts_model.tts_to_file(text=sentence, file_path=temp_filename)
-                
-                # Read the entire WAV file
-                with open(temp_filename, 'rb') as wav_file:
-                    chunk_data = wav_file.read()
-                    
-                    # Split large chunks into smaller, manageable sizes
-                    max_chunk_size = 100 * 1024  # 100 KB chunks
-                    for j in range(0, len(chunk_data), max_chunk_size):
-                        chunk = chunk_data[j:j+max_chunk_size]
-                        
-                        # Ensure first chunk keeps the WAV header
-                        if j == 0:
-                            print(f"Chunk {i}-{j} size: {len(chunk)} bytes")
-                            print(f"First 20 bytes: {chunk[:20]}")
-                            print(f"Is valid WAV: {chunk[:4] == b'RIFF'}")
-                            yield chunk
-                        else:
-                            # For subsequent chunks, only yield the audio data
-                            yield chunk
+            for sentence in sentences:
+                buffer = BytesIO()
+                tts_model.tts_to_file(text=sentence, file_path=buffer)
+                buffer.seek(0)
+                chunk_data = buffer.read()
+                max_chunk_size = 100 * 1024  # 100 KB
 
+                for i in range(0, len(chunk_data), max_chunk_size):
+                    chunk = chunk_data[i:i+max_chunk_size]
+                    if i == 0:
+                        print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
+                    yield chunk
+                """"
                 time.sleep(0.01)  # Short delay for the generator to finish reading
                 try:
                     os.remove(temp_filename)
                     print(f"Deleted {temp_filename}")
                 except OSError as e:
                     print(f"Error deleting {temp_filename}: {e}")
-        
+                """
         # Return a streaming response with individual WAV chunks
-        return StreamingResponse(
-            generate_wav_chunks(), 
-            media_type="audio/wav"
-        )
+        return StreamingResponse(generate_wav_chunks(), media_type="audio/wav")
+
     
     
     except Exception as e:    
