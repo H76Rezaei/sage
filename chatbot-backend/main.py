@@ -233,6 +233,9 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
                 max_chunk_size = 100 * 1024  # 100 KB
 
                 for i in range(0, len(chunk_data), max_chunk_size):
+                    if cancel_event.is_set():
+                        print("Streaming cancelled during chunk generation")
+                        return
                     chunk = chunk_data[i:i+max_chunk_size]
                     if i == 0:
                         print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
