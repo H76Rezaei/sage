@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from llama.ChatBotClass import DigitalCompanion
+#from llama.ChatBotClass_new import DigitalCompanion
 #from llama.generation import stream_generation
 #from llama.model_manager import get_model_and_tokenizer
 #from llama.prompt_manager import get_initial_prompts
@@ -10,59 +10,15 @@ from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
 from speech import  voice_to_text , text_to_speech
 
-
+from companion.digital_companion import DigitalCompanion
 from pydub import AudioSegment
 from io import BytesIO
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 import ffmpeg
-#SYSTEM_PROMPT = """ You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs. While empathetic, prioritize understanding and addressing the user's intent clearly.
-#                    You are a conversational AI designed to engage with users in a friendly, supportive, and contextually appropriate way. 
-#                    - Respond empathetically if the user shares feelings, but avoid making assumptions about their emotions. 
-#                    - Ask clarifying questions to better understand the user's intent when needed.
-#                    - If the user states facts or seeks information, respond logically and concisely without overpersonalizing.
-#                    - Tailor your responses to align with the user's tone and avoid repetitive or irrelevant suggestions.
-#                    - Encourage natural conversation while staying focused on the user's inputs.
-#                    - Your responses should be brief, simple, and concise.
-
-#"""
-
-SYSTEM_PROMPT = """ You are a helpful elderly assistant who responds appropriately to user queries. Provide clear, concise answers and adapt your tone to the user's needs.
-                    You are a conversational AI designed to provide clear, concise, and contextually appropriate answers to user queries. Your goals are:
-                    - Treat each user input as a new topic unless explicitly connected to previous messages.
-                    - Avoid making assumptions that are not directly supported by the user's input.
-                    - Ask clarifying questions only when necessary, and avoid overexplaining.
-                    - Provide actionable, straightforward suggestions tailored to the user's immediate question.
-                    - Maintain a friendly and supportive tone without repeating irrelevant details.
-                    - If the user rejects your advice, gracefully move on to provide alternative suggestions or insights.
-                    - Avoid making assumptions about the user's needs and respect their boundaries.
-
-"""
-
-#EMOTION_PROMPTS = {
-#        "joy": "The user is happy, match their energy, and try to get them to talk more about the source of their happiness",
-#        "sadness": "The user is sad, provide support and be an empathetic conversation partner",
-#        "anger": "It sounds like you're upset. Let me know how I can help.",
-#        "neutral": "Let’s continue our conversation in a balanced tone.",
-#        "confusion": "The user is feeling confused, try your best to help them explore their problem."
-#        # we gotta work on prompts more
-#    }
 
 
-EMOTION_PROMPTS = {
-    "joy": "Celebrate the user's happiness and encourage them to share more details about their positive experience.",
-    "sadness": "Acknowledge their feelings and provide brief, comforting responses without assumptions.",
-    "anger": "Respond calmly, and avoid unnecessary elaboration. Focus on resolving their concern quickly.",
-    "neutral": "Answer the user's query directly and maintain a balanced tone.",
-    "confusion": "Offer clear guidance and ask questions to clarify their needs. Avoid overexplaining."
-}
-
-
-       
-
-
-
-chatbot = DigitalCompanion(SYSTEM_PROMPT, EMOTION_PROMPTS)
+chatbot = DigitalCompanion()
 
 #llama model and tokenizer
 #model, tokenizer = get_model_and_tokenizer()
@@ -118,7 +74,7 @@ async def conversation(request: Request):
     user_input = body.get("message")
     
     async def response_stream():
-        async for token in chatbot.process_input("default_user", user_input):
+        async for token in chatbot.stream_workflow_response(user_input):
             yield f"data: {json.dumps({'response': token, 'is_final': False})}\n\n"
         yield f"data: {json.dumps({'response': '', 'is_final': True})}\n\n"
         #async for token in chatbot.process_input("default_user", user_input):
@@ -189,7 +145,7 @@ async def conversation_audio(audio: UploadFile):
 
         # Step 2: Generate Text Response
         response_text = ""
-        async for chunk in chatbot.process_input("default_user", user_input):
+        async for chunk in chatbot.stream_workflow_response(user_input):
             response_text += chunk
 
         print(f"Generated response: {response_text}")
