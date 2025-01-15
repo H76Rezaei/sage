@@ -1,0 +1,79 @@
+.voice-chat-container {
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  position: relative;
+}
+
+.listening-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  flex-grow: 0;
+}
+
+.stop-button {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  font-size: 3rem;
+  color: black;
+  cursor: pointer;
+}
+.stop-button svg {
+  transform: scale(1.5);
+}
+
+.stop-button:hover {
+  transform: translateX(-50%) translateY(-1px);
+  box-shadow: 0 4px 6px rgba(18, 8, 151, 0.1);
+}
+/* Status Text */
+.status-text {
+  font-size: 1.5rem;
+  color: rgb(59, 28, 170);
+  animation: pulse 1.5s infinite;
+  position: relative;
+  transform: scale(1.1);
+  bottom: 1px;
+}
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+.interrupt-text {
+  font-size: 1.5rem;
+  color: rgb(59, 28, 170);
+  animation: pulse 1.5s infinite;
+  position: relative;
+  bottom: 1px;
+}
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
