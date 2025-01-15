@@ -140,7 +140,7 @@ def store_evaluation_results(response_records: list):
     logging.info("Storing evaluation results in the database...")
     for record in response_records:
         try:
-            result = supabase.table('eval_table_test_mps').insert(record).execute()
+            result = supabase.table('evaluation').insert(record).execute()
             
             if not result.data:
                 logging.error(f"Failed to store evaluation record for log ID {record['log_id']}.")
