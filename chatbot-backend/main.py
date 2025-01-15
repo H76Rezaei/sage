@@ -185,17 +185,18 @@ async def conversation_audio(audio: UploadFile):
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
 
 
+cancel_event = asyncio.Event()
+
+
 # attempted streaming but frontend difficulties
 # splits response into chunks
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
-    temp_files = []  # Track temp files
-    cancel_event = asyncio.Event()
+    
+    global cancel_event 
+    cancel_event.set()  # Cancel any ongoing processing
+    cancel_event.clear()  # Reset the cancellation flag
 
-    def cancel_previous_task():
-        cancel_event.set()
-
-    background_tasks.add_task(cancel_previous_task)
 
     try:
         # Step 1: Convert Speech to Text
@@ -233,14 +234,7 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
                     if i == 0:
                         print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
                     yield chunk
-                """"
-                time.sleep(0.01)  # Short delay for the generator to finish reading
-                try:
-                    os.remove(temp_filename)
-                    print(f"Deleted {temp_filename}")
-                except OSError as e:
-                    print(f"Error deleting {temp_filename}: {e}")
-                """
+               
         # Return a streaming response with individual WAV chunks
         return StreamingResponse(generate_wav_chunks(), media_type="audio/wav")
 
@@ -251,14 +245,6 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         import traceback
         traceback.print_exc()
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
-    finally:
-        # Clean up temporary files
-        for temp_file in temp_files:
-            try:
-                os.remove(temp_file)
-            except Exception as cleanup_error:
-                print(f"Error cleaning up temp file {temp_file}: {cleanup_error}")
-
 
 
 if __name__ == "__main__":
