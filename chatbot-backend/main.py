@@ -222,6 +222,9 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         
         # Stream individual WAV chunks with controlled chunk size
         async def generate_wav_chunks():
+            if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return  # Stop chunk generation immediately if interrupted
             for sentence in sentences:
                 buffer = BytesIO()
                 tts_model.tts_to_file(text=sentence, file_path=buffer)
