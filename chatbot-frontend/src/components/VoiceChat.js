@@ -228,7 +228,11 @@ async function sendAudioToConversationEndpoint(audioBlob) {
                 ...prev,
                 { type: "text", sender: "bot", content: `Error: ${errorText || response.statusText}` },
             ]);
-            return;
+             // Add these lines to restart recording after error
+             setStatusText('Listening...');
+             startRecording();
+             return;
+            
         }
 
         const reader = response.body.getReader();
@@ -318,6 +322,8 @@ async function sendAudioToConversationEndpoint(audioBlob) {
             ...prev,
             { type: "text", sender: "bot", content: "Error processing bot response" },
         ]);
+        setStatusText('Listening...');
+        startRecording();
     }
 }
   
