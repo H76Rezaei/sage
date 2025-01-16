@@ -16,8 +16,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const botAudioRef = useRef(null); // Reference to track bot's audio
   const audioContextRef = useRef(null); // Audio context reference
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
-  const isInterruptedRef = useRef(false); // New ref to track interruptions
-
+  
   useEffect(() => {
     startRecording();
   }, []);
@@ -29,6 +28,14 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
+
+        // Stop existing tracks before creating a new MediaRecorder
+        if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
 
         // Create a new MediaRecorder instance to record the audio
         const mediaRecorder = new MediaRecorder(stream);
@@ -173,7 +180,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
             try {
                 await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
-                startRecording(); // Restart recording after bot response
+                //startRecording(); // Restart recording after bot response
             } catch (error) {
                 console.error("Error handling bot audio:", error);
                 cleanup();
