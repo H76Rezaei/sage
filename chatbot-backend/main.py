@@ -187,14 +187,20 @@ async def conversation_audio(audio: UploadFile):
 
 cancel_event = asyncio.Event()
 
+@app.post("/cancel")
+async def cancel_stream():
+    #global cancel_event
+    cancel_event.set()  # Signal cancellation
+    print("Cancel event triggered")
+    return JSONResponse(content={"message": "Processing cancelled."}, status_code=200)
+
 
 # attempted streaming but frontend difficulties
 # splits response into chunks
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
-    
-    global cancel_event 
-    cancel_event.set()  # Cancel any ongoing processing
+    #cancel_event = asyncio.Event()
+    #cancel_event.set()  # Cancel any ongoing processing
     cancel_event.clear()  # Reset the cancellation flag
 
 
@@ -226,6 +232,9 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
                     print("Chunk generation cancelled")
                     return  # Stop chunk generation immediately if interrupted
             for sentence in sentences:
+                if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return  # Stop chunk generation immediately if interrupted
                 buffer = BytesIO()
                 tts_model.tts_to_file(text=sentence, file_path=buffer)
                 buffer.seek(0)
