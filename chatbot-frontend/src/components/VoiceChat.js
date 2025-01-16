@@ -67,6 +67,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               botAudioRef.current.currentTime = 0;
               setStatusText('Listening..'); // Display Stopped
               setInterruptMessage('');
+              handleInterrupt()
             }
             
             clearTimeout(silenceTimeoutRef.current);
@@ -178,6 +179,21 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
             }
         }
     }
+};
+
+const handleInterrupt = async () => {
+  try {
+      const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
+      if (response.ok) {
+          console.log("Cancellation confirmed by backend.");
+          cleanup();
+          setStatusText('Listening...');
+      } else {
+          console.error("Backend failed to confirm cancellation.");
+      }
+  } catch (error) {
+      console.error("Error sending cancellation request:", error);
+  }
 };
 
 async function sendAudioToConversationEndpoint(audioBlob) {
