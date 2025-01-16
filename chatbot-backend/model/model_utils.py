@@ -33,7 +33,7 @@ def init_model(
     model = ChatOllama(
         model=model,
         temperature=temperature,
-        max_tokens=max_tokens,
+        num_predict=max_tokens,
         top_p=top_p,
         device=device,
         stream=stream
