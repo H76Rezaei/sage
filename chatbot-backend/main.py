@@ -172,7 +172,7 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         
         # Step 2: Generate Text Response
         response_text = ""
-        async for chunk in chatbot.process_input("default_user", user_input):
+        async for chunk in chatbot.stream_workflow_response(user_input):
             if cancel_event.is_set():
                 print("Processing cancelled")
                 return
