@@ -30,7 +30,7 @@ print("Available speakers:", tts_model.speakers)
 
 
 # Load the Whisper model (choose 'tiny', 'base', 'small', 'large')
-model = whisper.load_model("small")
+model = whisper.load_model("base")
 
 
 def downsample_audio(audio_data: BytesIO) -> BytesIO:
