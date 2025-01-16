@@ -5,7 +5,7 @@ import listeningAnimation from "./Animation.json";
 import "./Voice.css";
 import { sendAudioToBackend } from "../services/speechApi";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -20,16 +20,29 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
 
   const isInterruptedRef = useRef(false);
-  
-
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isVoiceRoute = location.pathname === "/voice";
 
-  useEffect(() => {
-    startRecording();
-  }, []);
+ useEffect(() => {
+        if (isVoiceRoute && !isRecording) {
+            startRecording();
+            setIsRecording(true);
+        } else if (!isVoiceRoute && isRecording) {
+            cleanup();
+            setIsRecording(false);
+        }
+        return () => {
+            if (isRecording) {
+                cleanup();
+            }
+        };
+    }, [isVoiceRoute, isRecording]);
 
   const startRecording = async () => {
+    if (!isVoiceRoute || isRecording) return;
+    
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         // Request audio stream from the user's microphone
