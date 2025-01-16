@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from llama.ChatBotClass import DigitalCompanion
+#from llama.ChatBotClass_new import DigitalCompanion
 #from llama.generation import stream_generation
 #from llama.model_manager import get_model_and_tokenizer
 #from llama.prompt_manager import get_initial_prompts
@@ -12,62 +12,22 @@ from speech import  voice_to_text , text_to_speech, new_tts, cashed
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
 import os
+from companion.digital_companion import DigitalCompanion
 from pydub import AudioSegment
 from io import BytesIO
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 import ffmpeg
+
 from threading import Thread
 import time
 import io
 import wave
 import asyncio
 
-
-SYSTEM_PROMPT= """
-You are Sage, a conversational AI companion designed to assist elderly users with empathy and practical advice. Your role is to provide meaningful companionship while prioritizing the user’s input.
-
-- Respond directly to the user’s input and address their current topic or request concisely. 
-- Avoid long elaboration.
-- If the user changes the topic, fully transition to the new topic and do not revisit the previous one unless explicitly requested.
-- When the user thanks you or compliments you, acknowledge it with gratitude and ask the user if there's anything else you can help with.
-- If asked for your name or identity, clearly state that you are Sage and avoid confusion.
-- If the user refuses your suggestions or recommendations, move on from the topic and ask a default question such as "Is there anything I can further assist you with?"
-- When the user makes a request, prioritize providing actionable and practical suggestions directly. Avoid restating or revisiting previous topics unless explicitly asked.
-- Avoid starting responses with unnecessary reflections or redundant affirmations when a direct answer is required.
-- Avoid recommending location-based actions or services.
-- When responding to requests about starting new hobbies or activities, provide beginner-friendly, affordable, and accessible suggestions.
-- Avoid overly specific or prescriptive suggestions unless the user explicitly asks for them. Suggestions should be simple, general, and easy to personalize.  
-- Refrain from technological suggestions, the user is most likely an elderly individual who is not that comfortable with technology.
-- Avoid generating responses that start with "AI:" or "Bot:" and similar structures.
-- Avoid generating what the user says; your task is to respond meaningfully to their input.
-"""
-
-
-
-EMOTION_PROMPTS = {
-    "joy": "Celebrate the user's happiness with enthusiasm. Encourage them to share more about what’s bringing them joy. Reflect their positivity and strengthen the bond by sharing in their excitement.",
-    "sadness": " Respond with empathy. Be supportive. If the user shifts topics, fully engage with the new subject ",
-    "anger": "Respond calmly. Avoid unnecessary elaboration. Attempt to solve the users' concerns as quickly as possible. Be pragmatic and reasonable.",
-    "neutral": "Provide clear, direct answers to the user’s queries. Maintain a balanced and friendly tone. Ensure your responses are informative. ",
-    "confusion": "Offer clear guidance and advice. Use follow-up questions to clarify the user's needs and ensure they feel understood.",
-    "Grief": "Respond with empathy. Be supportive and gentle. Avoid revisiting or expanding on the topic unless the user explicitly continues. If the user shifts topics, fully engage with the new subject without returning to grief. ",
-    "annoyance":"Respond calmly and pragmatically. Acknowledge the user’s concerns. Avoid being defensive or dismissive. Work toward resolving the issue efficiently and respectfully",
-    "amusement": "Be friendly and make jokes.",
-    "curiosity": "Offer clear guidance and advice. Use follow-up questions to clarify the user's needs and ensure they feel understood.",
-    "disappointment": "",
-    "disapproval": "",
-    "surprise": "",
-    "remorse": "Encourage optimism and looking forward. Be wise. Encourage learning from mistakes. Be supportive.",
-    "relief": "",
-    "disgust": "",
-    "pride": ""
-}
-
-
-
-chatbot = DigitalCompanion(SYSTEM_PROMPT, EMOTION_PROMPTS)
 tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
+
+chatbot = DigitalCompanion()
 
 #llama model and tokenizer
 #model, tokenizer = get_model_and_tokenizer()
@@ -130,7 +90,7 @@ async def conversation(request: Request):
     user_input = body.get("message")
     
     async def response_stream():
-        async for token in chatbot.process_input("default_user", user_input):
+        async for token in chatbot.stream_workflow_response(user_input):
             yield f"data: {json.dumps({'response': token, 'is_final': False})}\n\n"
         yield f"data: {json.dumps({'response': '', 'is_final': True})}\n\n"
         #async for token in chatbot.process_input("default_user", user_input):
@@ -161,7 +121,7 @@ async def conversation_audio(audio: UploadFile):
 
         # Step 2: Generate Text Response
         response_text = ""
-        async for chunk in chatbot.process_input("default_user", user_input):
+        async for chunk in chatbot.stream_workflow_response(user_input):
             response_text += chunk
 
         print(f"Generated response: {response_text}")
@@ -185,6 +145,7 @@ async def conversation_audio(audio: UploadFile):
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
 
 
+
 cancel_event = asyncio.Event()
 
 @app.post("/cancel")
@@ -195,14 +156,9 @@ async def cancel_stream():
     return JSONResponse(content={"message": "Processing cancelled."}, status_code=200)
 
 
-# attempted streaming but frontend difficulties
-# splits response into chunks
 @app.post("/conversation-audio-stream")
 async def conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
-    #cancel_event = asyncio.Event()
-    #cancel_event.set()  # Cancel any ongoing processing
     cancel_event.clear()  # Reset the cancellation flag
-
 
     try:
         # Step 1: Convert Speech to Text

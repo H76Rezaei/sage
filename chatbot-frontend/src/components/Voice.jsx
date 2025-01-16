@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
-import Lottie from 'react-lottie';
+import Lottie from "react-lottie";
 import listeningAnimation from "./Animation.json";
-import "./VoiceChat.css";
-import { sendAudioToBackend } from '../services/speechApi';
+import "./Voice.css";
+import { sendAudioToBackend } from "../services/speechApi";
+
+import { useNavigate } from "react-router-dom";
 
 const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [statusText, setStatusText] = useState(''); // State to manage text content
-  const [interruptMessage, setInterruptMessage] = useState(''); // State to manage interrupt message
+  const [statusText, setStatusText] = useState(""); // State to manage text content
+  const [interruptMessage, setInterruptMessage] = useState(""); // State to manage interrupt message
   const mediaRecorderRef = useRef(null);
   const stopFlagRef = useRef(false);
   const userSpeakingRef = useRef(false); // Flag to track if the user has started speaking
@@ -16,8 +18,13 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const botAudioRef = useRef(null); // Reference to track bot's audio
   const audioContextRef = useRef(null); // Audio context reference
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
+
   const isInterruptedRef = useRef(false);
   
+
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     startRecording();
   }, []);
@@ -49,10 +56,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
         // Start recording
         mediaRecorder.start();
-        setStatusText('Listening...'); // Update status text to listening
+        setStatusText("Listening..."); // Update status text to listening
 
         // Initialize audio context and analyser
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 2048;
         const source = audioContext.createMediaStreamSource(stream);
@@ -64,14 +72,16 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
         const detectSilence = () => {
           analyser.getByteFrequencyData(dataArray);
-          const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      
+          const avgVolume =
+            dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
           if (avgVolume > volumeThreshold) {
             userSpeakingRef.current = true;
             silenceDetectionStartedRef.current = true;
-      
+
             // Interrupt bot if playing
-            if (botAudioRef.current && !botAudioRef.current.paused) { // Check if not paused
+            if (botAudioRef.current && !botAudioRef.current.paused) {
+              // Check if not paused
               botAudioRef.current.pause();
               botAudioRef.current.currentTime = 0;
               setStatusText('Listening..'); // Display Stopped
@@ -79,11 +89,15 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               handleInterrupt()
             }
             
+
             clearTimeout(silenceTimeoutRef.current);
             silenceTimeoutRef.current = null;
           }
-      
-          if (silenceDetectionStartedRef.current && avgVolume <= volumeThreshold) {
+
+          if (
+            silenceDetectionStartedRef.current &&
+            avgVolume <= volumeThreshold
+          ) {
             if (!stopFlagRef.current && silenceTimeoutRef.current === null) {
               silenceTimeoutRef.current = setTimeout(() => {
                 if (silenceDetectionStartedRef.current) {
@@ -94,7 +108,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               }, 2000);
             }
           }
-      
+
           requestAnimationFrame(detectSilence);
         };
 
@@ -102,16 +116,20 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
         // Update state to reflect that the recording has started
         setIsRecording(true);
-        setStatusText('Listening...'); // Update status text to listening
+        setStatusText("Listening..."); // Update status text to listening
       } catch (err) {
         console.error("Error accessing audio devices:", err);
         if (!stopFlagRef.current) {
           cleanup();
           setChatHistory((prev) => [
             ...prev,
-            { type: "text", sender: "bot", content: "Error: Unable to access audio devices." },
+            {
+              type: "text",
+              sender: "bot",
+              content: "Error: Unable to access audio devices.",
+            },
           ]);
-          onSelectOption('voiceHistory');
+          onSelectOption("voiceHistory");
         }
       }
     }
@@ -121,22 +139,24 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
     }
-    setStatusText('Processing...'); // Update status text to processing
+    setStatusText("Processing..."); // Update status text to processing
   };
 
   const handleStopButton = () => {
     cleanup();
-    onSelectOption('stop');
+    navigate("/voice-history");
   };
 
   const cleanup = () => {
-    stopFlagRef.current = true;  // Set stop flag to prevent new recordings
+    stopFlagRef.current = true; // Set stop flag to prevent new recordings
 
     // Stop recording and clean up media recorder
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       if (mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        mediaRecorderRef.current.stream
+          .getTracks()
+          .forEach((track) => track.stop());
       }
       mediaRecorderRef.current = null;
     }
@@ -162,8 +182,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
     // Reset states
     setIsRecording(false);
-    setStatusText('Stopped');
-    setInterruptMessage('');
+    setStatusText("Stopped");
+    setInterruptMessage("");
   };
 
   const handleDataAvailable = async (event) => {
@@ -217,7 +237,7 @@ const handleInterrupt = async () => {
     }
   };
 
-async function sendAudioToConversationEndpoint(audioBlob) {
+  async function sendAudioToConversationEndpoint(audioBlob) {
     try {
         const response = await sendAudioToBackend(audioBlob);
 
@@ -326,27 +346,24 @@ async function sendAudioToConversationEndpoint(audioBlob) {
         startRecording();
     }
 }
-  
 
   const defaultOptions = {
     loop: true,
     autoplay: true,
     animationData: listeningAnimation,
     rendererSettings: {
-      preserveAspectRatio: "xMidYMid slice"
-    }
+      preserveAspectRatio: "xMidYMid slice",
+    },
   };
 
   return (
     <div className="voice-chat-container">
-      <p className="status-text pulse">{statusText}</p> {/* Status text with pulse */}
-      <p className="interrupt-text">{interruptMessage}</p> {/* Interrupt message */}
+      <p className="status-text pulse">{statusText}</p>{" "}
+      {/* Status text with pulse */}
+      <p className="interrupt-text">{interruptMessage}</p>{" "}
+      {/* Interrupt message */}
       <div className="listening-indicator">
-        <Lottie 
-          options={defaultOptions}
-          height={300}
-          width={300}
-        />
+        <Lottie options={defaultOptions} height={300} width={300} />
       </div>
       <button className="stop-button" onClick={handleStopButton}>
         <X />
