@@ -1,0 +1,233 @@
+/* General Container */
+.main-container {
+  height: 100vh;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  font-family: "Poppins", sans-serif;
+  overflow: hidden;
+  position: relative;
+  margin: 0;
+}
+
+.welcome-message {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #3b82f6;
+  text-transform: uppercase;
+  margin: 2rem;
+}
+
+.content-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: auto;
+}
+
+.left-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  gap: 2rem;
+}
+
+.right-image {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.right-image img {
+  width: 90%;
+  max-width: 600px;
+  height: auto;
+}
+.welcome-section {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  animation: fadeIn 1s ease-out;
+  margin-bottom: 2rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-section h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  animation: fadeIn 1.5s ease-out;
+}
+
+.welcome-section .message-icon {
+  width: 4rem;
+  height: 4rem;
+  color: #3b82f6;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.button-container {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 1s ease-out;
+}
+
+.button .icon {
+  margin-bottom: 0.7rem;
+  width: 2rem;
+  height: 2rem;
+  color: #f4f4f4;
+}
+
+.button span {
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Media query for smaller screens (less than 768px) */
+@media (max-width: 768px) {
+  .content-container {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .left-content {
+    padding: 1rem;
+    text-align: center;
+    gap: 1.5rem;
+  }
+
+  .right-image {
+    margin-top: 2rem;
+    width: 100%;
+    display: none;
+  }
+
+  .button-container {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .welcome-section .message-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .welcome-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .button {
+    width: 80%;
+    padding: 20px;
+    font-size: 16px;
+    margin-top: 1rem;
+  }
+
+  .main-container {
+    padding: 1rem;
+    justify-content: flex-start;
+  }
+}
+
+/* Media query for extra small screens (less than 380px) */
+@media (max-width: 380px) {
+  .button-container {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .welcome-section .message-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .welcome-section h1 {
+    font-size: 1.3rem;
+  }
+
+  .button {
+    width: 80%;
+    padding: 16px;
+    font-size: 14px;
+  }
+}
+
+/* Button Styling */
+.button {
+  display: flex;
+  flex-direction: column;
+  margin: 1rem;
+  align-items: center;
+  justify-content: center;
+  background-color: #1d95eb;
+  border: 0;
+  border-radius: 45px;
+  color: #fff;
+  font-size: 24px;
+  outline: 0;
+  padding: 40px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.3s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.button:before {
+  background-color: initial;
+  background-image: linear-gradient(#fff 0, rgba(255, 255, 255, 0) 100%);
+  border-radius: 125px;
+  content: "";
+  height: 50%;
+  left: 4%;
+  opacity: 0.5;
+  position: absolute;
+  top: 0;
+  transition: all 0.3s;
+  width: 92%;
+}
+
+.button:hover {
+  box-shadow: rgba(255, 255, 255, 0.2) 0 3px 15px inset,
+    rgba(0, 0, 0, 0.1) 0 3px 5px, rgba(0, 0, 0, 0.1) 0 10px 13px;
+  transform: scale(1.05);
+}

@@ -7,11 +7,3 @@ if __name__ == "__main__":
     thread_id = "eval-session"
    
     asyncio.run(process_and_store_conversations(version_id= 11, user_id=user_id, thread_id=thread_id))
-
-
-
- 
-            
-
-
-

@@ -1,0 +1,74 @@
+1.0.0: BlenderBot, CPU only , basic emotion tagging (Vader: positive, negative neutral), flask
+
+2.0.0: LLama, CPU only, remote from hugging-face cloud, no system prompt, no emotion tagging/prompt, no memory, flask
+2.1.0: LLama, GPU only, remote from hugging-face cloud, no system prompt, no emotion tagging/prompt, no memory, fastAPI
+2.2.0: LLama, GPU , remote from hugging-face cloud, system prompt, no emotion tagging, no emotion prompt, no memory, fastAPI
+2.2.1: LLama, CPU , remote from hugging-face cloud, system prompt, no emotion tagging, no emotion prompt, no memory, fastAPI
+2.3.0: LLama, GPU , remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory, fastAPI
+2.3.1: LLama, CPU , remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory, fastAPI
+2.4.0: LLama, CPU , cloud, system prompt, no emotion tagging, no emotion prompt, basic memory
+
+3.1.0: LLama+Ollama, CPU , locally running, system prompt, no emotion tagging, no emotion prompt, memory, fastAPI
+3.2.0: LLama+Ollama, CPU , locally running, system prompt,  emotion tagging,  emotion prompt, memory, fastAPI
+3.2.1: LLama+Ollama, GPU , locally running, system prompt,  emotion tagging,  emotion prompt, memory, fastAPI
+3.2.x-alpha: version 3.2.x but with different parameters and prompts 
+3.2.x-beta: version 3.2.x but with different parameters and prompts 
+.
+.
+3.2.x-z: however many I will be able to test 
+
+
+3.3.0: Most recent version, includes basic speech synthesis
+
+
+Version locations:
+
+1.0.0: BlenderBot, CPU only , basic emotion tagging (Vader: positive, negative neutral), flask
+--> branch: first-iteration, last commit, in main.py
+
+
+
+2.0.0: LLama, CPU only, remote from hugging-face cloud, no system prompt, no emotion tagging/prompt, no memory, flask
+--> branch: emotion-integration-using-llama, commit ref: a187a8b
+
+2.1.0: LLama, GPU only, remote from hugging-face cloud, no system prompt, no emotion tagging/prompt, no memory, fastAPI
+--> branch emotion-integration-with-llama, commit ref: fe3a741
+(I will test this one because the code only works for GPU)
+
+2.2.0: LLama, GPU , remote from hugging-face cloud, system prompt, no emotion tagging, no emotion prompt, no memory, fastAPI
+2.2.1: LLama, CPU , remote from hugging-face cloud, system prompt, no emotion tagging, no emotion prompt, no memory, fastAPI
+-->branch: emotion-integration-with-llama , commit ref: b47f48a
+
+tip: usage of CPU or GPU is controlled by an if-statement in generation.py
+
+2.3.0: LLama, GPU , remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory, fastAPI
+2.3.1: LLama, CPU , remote from hugging-face cloud, system prompt, emotion tagging, emotion prompt, no memory, fastAPI
+--> branch: emotion-integration-with-llama branch, commit: last commit on that branch
+
+tip: usage of CPU or GPU is controlled by an if-statement in generation.py
+
+2.4.0: LLama, CPU , cloud, system prompt, no emotion tagging, no emotion prompt, basic memory
+--> Reihaneh has this version
+
+
+
+
+3.1.0: LLama+Ollama, CPU , locally running, system prompt, no emotion tagging, no emotion prompt, memory, fastAPI
+--> Reihaneh has this version
+
+3.2.0: LLama+Ollama, CPU , locally running, system prompt,  emotion tagging,  emotion prompt, memory, fastAPI
+3.2.1: LLama+Ollama, GPU , locally running, system prompt,  emotion tagging,  emotion prompt, memory, fastAPI
+--> Current version, 
+Branch: second-iteration, commit: last commit
+or Branch: DigitalcompanionClass_mem, commit: last commit  
+
+note: branch second-iteration has speech synthesis and you might have to download extra stuff for the code to compile
+
+3.2.x-alpha: version 3.2.x but with different parameters and prompts 
+3.2.x-beta: version 3.2.x but with different parameters and prompts 
+.
+.
+3.2.x-z: however many we will be able to test 
+
+3.3.0: Most recent version, includes basic speech synthesis
+--> Branch: third-iteration
