@@ -16,6 +16,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const botAudioRef = useRef(null); // Reference to track bot's audio
   const audioContextRef = useRef(null); // Audio context reference
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
+  const isInterruptedRef = useRef(false);
   
   useEffect(() => {
     startRecording();
@@ -168,6 +169,12 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const handleDataAvailable = async (event) => {
     if (stopFlagRef.current || !userSpeakingRef.current) return;
 
+    if (isInterruptedRef.current) {
+      isInterruptedRef.current = false;
+      startRecording();
+      return;
+  }
+
     if (event.data.size > 0) {
         const audioBlob = new Blob([event.data], { type: "audio/webm" });
 
@@ -200,7 +207,8 @@ const handleInterrupt = async () => {
           botAudioRef.current.currentTime = 0;
           botAudioRef.current = null;
         }
-        setStatusText('Listening...');
+        setStatusText('Stopped'); // Update status to "Stopped" immediately
+        isInterruptedRef.current = true;
       } else {
         console.error("Backend failed to confirm cancellation.");
       }
@@ -256,6 +264,8 @@ async function sendAudioToConversationEndpoint(audioBlob) {
         while (true) {
             const { done, value } = await reader.read();
             if (done) {
+              console.log("Finished receiving bot audio");
+              setStatusText('Listening...'); // Switch back to "Listening"
               startRecording();
               break;
             }
