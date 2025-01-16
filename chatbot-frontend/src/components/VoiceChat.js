@@ -16,6 +16,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const botAudioRef = useRef(null); // Reference to track bot's audio
   const audioContextRef = useRef(null); // Audio context reference
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
+  const isInterruptedRef = useRef(false); // New ref to track interruptions
 
   useEffect(() => {
     startRecording();
@@ -182,19 +183,24 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 };
 
 const handleInterrupt = async () => {
-  try {
+    try {
       const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
       if (response.ok) {
-          console.log("Cancellation confirmed by backend.");
-          cleanup();
-          setStatusText('Listening...');
+        console.log("Cancellation confirmed by backend.");
+
+        if (botAudioRef.current) {
+          botAudioRef.current.pause();
+          botAudioRef.current.currentTime = 0;
+          botAudioRef.current = null;
+        }
+        setStatusText('Listening...');
       } else {
-          console.error("Backend failed to confirm cancellation.");
+        console.error("Backend failed to confirm cancellation.");
       }
-  } catch (error) {
+    } catch (error) {
       console.error("Error sending cancellation request:", error);
-  }
-};
+    }
+  };
 
 async function sendAudioToConversationEndpoint(audioBlob) {
     try {
@@ -242,7 +248,10 @@ async function sendAudioToConversationEndpoint(audioBlob) {
 
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              startRecording();
+              break;
+            }
 
             if (value && value.byteLength > 0) {
                 const combinedData = new Uint8Array(accumulatedData.length + value.length);
