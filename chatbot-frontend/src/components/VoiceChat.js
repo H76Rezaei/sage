@@ -65,10 +65,10 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
             if (botAudioRef.current && !botAudioRef.current.paused) { // Check if not paused
               botAudioRef.current.pause();
               botAudioRef.current.currentTime = 0;
-              setStatusText('Listening...');
+              setStatusText('Listening..'); // Display Stopped
               setInterruptMessage('');
             }
-      
+            
             clearTimeout(silenceTimeoutRef.current);
             silenceTimeoutRef.current = null;
           }
@@ -157,7 +157,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   };
 
   const handleDataAvailable = async (event) => {
-    if (stopFlagRef.current) return;
+    if (stopFlagRef.current || !userSpeakingRef.current) return;
 
     if (event.data.size > 0) {
         const audioBlob = new Blob([event.data], { type: "audio/webm" });
