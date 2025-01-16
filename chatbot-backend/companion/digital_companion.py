@@ -20,7 +20,7 @@ class DigitalCompanion:
     _model = None
     config_path = os.path.join(os.path.dirname(__file__), "default_model_config.json")
 
-    system_prompt, emotion_prompts = fetch_prompt_data(system_id=14, emotion_group_id=5)
+    system_prompt, emotion_prompts = fetch_prompt_data(system_id=13, emotion_group_id=5)
     prompt_manager = PromptManager(system_prompt= system_prompt)
     emotion_handler = EmotionHandler(emotion_prompts)
     
