@@ -19,6 +19,10 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const audioContextRef = useRef(null); // Audio context reference
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
 
+  const isInterruptedRef = useRef(false);
+  
+
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,6 +36,14 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
+
+        // Stop existing tracks before creating a new MediaRecorder
+        if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
 
         // Create a new MediaRecorder instance to record the audio
         const mediaRecorder = new MediaRecorder(stream);
@@ -56,7 +68,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         audioContextRef.current = audioContext;
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const volumeThreshold = 70; // Adjust this threshold as needed
+        const volumeThreshold = 50; // Adjust this threshold as needed
 
         const detectSilence = () => {
           analyser.getByteFrequencyData(dataArray);
@@ -72,9 +84,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               // Check if not paused
               botAudioRef.current.pause();
               botAudioRef.current.currentTime = 0;
-              setStatusText("Listening...");
-              setInterruptMessage("");
+              setStatusText('Listening..'); // Display Stopped
+              setInterruptMessage('');
+              handleInterrupt()
             }
+            
 
             clearTimeout(silenceTimeoutRef.current);
             silenceTimeoutRef.current = null;
@@ -173,153 +187,165 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   };
 
   const handleDataAvailable = async (event) => {
-    if (stopFlagRef.current) return;
+    if (stopFlagRef.current || !userSpeakingRef.current) return;
+
+    if (isInterruptedRef.current) {
+      isInterruptedRef.current = false;
+      startRecording();
+      return;
+  }
 
     if (event.data.size > 0) {
-      const audioBlob = new Blob([event.data], { type: "audio/webm" });
+        const audioBlob = new Blob([event.data], { type: "audio/webm" });
 
-      if (audioBlob.size > 1000) {
-        console.log("User audio recorded:", audioBlob);
-        setChatHistory((prev) => [
-          ...prev,
-          {
-            type: "audio",
-            sender: "user",
-            content: URL.createObjectURL(audioBlob),
-          },
-        ]);
+        if (audioBlob.size > 1000) {
+            console.log("User audio recorded:", audioBlob);
+            setChatHistory((prev) => [
+                ...prev,
+                { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
+            ]);
 
-        try {
-          await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
-          startRecording(); // Restart recording after bot response
-        } catch (error) {
-          console.error("Error handling bot audio:", error);
-          cleanup();
+            try {
+                await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
+                //startRecording(); // Restart recording after bot response
+            } catch (error) {
+                console.error("Error handling bot audio:", error);
+                cleanup();
+            }
         }
-      }
     }
-  };
+};
 
-  const handleStop = () => {
-    // Reset logic can go here if needed
+const handleInterrupt = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
+      if (response.ok) {
+        console.log("Cancellation confirmed by backend.");
+
+        if (botAudioRef.current) {
+          botAudioRef.current.pause();
+          botAudioRef.current.currentTime = 0;
+          botAudioRef.current = null;
+        }
+        setStatusText('Stopped'); // Update status to "Stopped" immediately
+        isInterruptedRef.current = true;
+      } else {
+        console.error("Backend failed to confirm cancellation.");
+      }
+    } catch (error) {
+      console.error("Error sending cancellation request:", error);
+    }
   };
 
   async function sendAudioToConversationEndpoint(audioBlob) {
     try {
-      const response = await sendAudioToBackend(audioBlob);
+        const response = await sendAudioToBackend(audioBlob);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Backend error: ${response.status} - ${errorText}`);
-        setChatHistory((prev) => [
-          ...prev,
-          {
-            type: "text",
-            sender: "bot",
-            content: `Error: ${errorText || response.statusText}`,
-          },
-        ]);
-        return;
-      }
-
-      const reader = response.body.getReader();
-      let accumulatedData = new Uint8Array();
-      const playbackQueue = [];
-      let isPlaying = false;
-
-      const playNextChunk = () => {
-        if (playbackQueue.length === 0) {
-          isPlaying = false;
-          botAudioRef.current = null;
-          return;
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Backend error: ${response.status} - ${errorText}`);
+            setChatHistory((prev) => [
+                ...prev,
+                { type: "text", sender: "bot", content: `Error: ${errorText || response.statusText}` },
+            ]);
+             // Add these lines to restart recording after error
+             setStatusText('Listening...');
+             startRecording();
+             return;
+            
         }
-        isPlaying = true;
-        const audioBlob = playbackQueue.shift();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        botAudioRef.current = audio;
 
-        audio.play().catch((error) => {
-          console.error("Error playing audio chunk:", error);
-          URL.revokeObjectURL(audioUrl);
-          playNextChunk();
-          botAudioRef.current = null;
-        });
+        const reader = response.body.getReader();
+        let accumulatedData = new Uint8Array();
+        const playbackQueue = [];
+        let isPlaying = false;
 
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          playNextChunk();
-        };
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        if (value && value.byteLength > 0) {
-          const combinedData = new Uint8Array(
-            accumulatedData.length + value.length
-          );
-          combinedData.set(accumulatedData, 0);
-          combinedData.set(value, accumulatedData.length);
-          accumulatedData = combinedData;
-
-          let startIndex = 0;
-          while (startIndex < accumulatedData.length) {
-            const isWavHeader =
-              accumulatedData[startIndex] === 82 &&
-              accumulatedData[startIndex + 1] === 73 &&
-              accumulatedData[startIndex + 2] === 70 &&
-              accumulatedData[startIndex + 3] === 70;
-
-            if (isWavHeader) {
-              let dataLength = accumulatedData.length - startIndex;
-              if (dataLength >= 8) {
-                const riffChunkSize =
-                  new DataView(
-                    accumulatedData.buffer,
-                    startIndex + 4,
-                    4
-                  ).getUint32(0, true) + 8;
-                if (dataLength >= riffChunkSize) {
-                  const wavData = accumulatedData.subarray(
-                    startIndex,
-                    startIndex + riffChunkSize
-                  );
-                  const chunkBlob = new Blob([wavData], { type: "audio/wav" });
-                  playbackQueue.push(chunkBlob);
-                  // Add to chat history *immediately* after pushing to playbackQueue:
-                  const botAudioUrl = URL.createObjectURL(chunkBlob); //Create URL right after the blob is created
-                  setChatHistory((prev) => [
-                    ...prev,
-                    { type: "audio", sender: "bot", content: botAudioUrl },
-                  ]);
-                  if (!isPlaying) playNextChunk();
-
-                  startIndex += riffChunkSize;
-                  continue;
-                }
-              }
+        const playNextChunk = () => {
+            if (playbackQueue.length === 0) {
+                isPlaying = false;
+                botAudioRef.current = null;
+                return;
             }
-            break;
-          }
-          accumulatedData = accumulatedData.subarray(startIndex);
-        }
-      }
+            isPlaying = true;
+            const audioBlob = playbackQueue.shift();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            botAudioRef.current = audio;
 
-      console.log("All audio chunks processed.");
+            audio.play().catch(error => {
+                console.error("Error playing audio chunk:", error);
+                URL.revokeObjectURL(audioUrl);
+                playNextChunk();
+                botAudioRef.current = null;
+            });
+
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                playNextChunk();
+            };
+        };
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              console.log("Finished receiving bot audio");
+              setStatusText('Listening...'); // Switch back to "Listening"
+              startRecording();
+              break;
+            }
+
+            if (value && value.byteLength > 0) {
+                const combinedData = new Uint8Array(accumulatedData.length + value.length);
+                combinedData.set(accumulatedData, 0);
+                combinedData.set(value, accumulatedData.length);
+                accumulatedData = combinedData;
+
+                let startIndex = 0;
+                while (startIndex < accumulatedData.length) {
+                    const isWavHeader =
+                        accumulatedData[startIndex] === 82 &&
+                        accumulatedData[startIndex + 1] === 73 &&
+                        accumulatedData[startIndex + 2] === 70 &&
+                        accumulatedData[startIndex + 3] === 70;
+
+                    if (isWavHeader) {
+                        let dataLength = accumulatedData.length - startIndex;
+                        if (dataLength >= 8) {
+                            const riffChunkSize = new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
+                            if (dataLength >= riffChunkSize) {
+                                const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
+                                const chunkBlob = new Blob([wavData], { type: "audio/wav" });
+                                playbackQueue.push(chunkBlob);
+                                // Add to chat history *immediately* after pushing to playbackQueue:
+                                const botAudioUrl = URL.createObjectURL(chunkBlob); //Create URL right after the blob is created
+                                setChatHistory((prev) => [
+                                    ...prev,
+                                    { type: "audio", sender: "bot", content: botAudioUrl },
+                                ]);
+                                if (!isPlaying) playNextChunk();
+
+                                startIndex += riffChunkSize;
+                                continue;
+                            }
+                        }
+                    }
+                    break;
+                }
+                accumulatedData = accumulatedData.subarray(startIndex);
+            }
+        }
+
+        console.log("All audio chunks processed.");
     } catch (error) {
-      console.error("Error streaming audio:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        {
-          type: "text",
-          sender: "bot",
-          content: "Error processing bot response",
-        },
-      ]);
+        console.error("Error streaming audio:", error);
+        setChatHistory((prev) => [
+            ...prev,
+            { type: "text", sender: "bot", content: "Error processing bot response" },
+        ]);
+        setStatusText('Listening...');
+        startRecording();
     }
-  }
+}
 
   const defaultOptions = {
     loop: true,

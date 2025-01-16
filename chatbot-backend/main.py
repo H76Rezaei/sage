@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
@@ -23,6 +23,7 @@ from threading import Thread
 import time
 import io
 import wave
+import asyncio
 
 tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
 
@@ -144,10 +145,21 @@ async def conversation_audio(audio: UploadFile):
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
 
 
-#streaming
+
+cancel_event = asyncio.Event()
+
+@app.post("/cancel")
+async def cancel_stream():
+    #global cancel_event
+    cancel_event.set()  # Signal cancellation
+    print("Cancel event triggered")
+    return JSONResponse(content={"message": "Processing cancelled."}, status_code=200)
+
+
 @app.post("/conversation-audio-stream")
-async def conversation_audio_stream(audio: UploadFile):
-    temp_files = []  # Track temp files
+async def conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
+    cancel_event.clear()  # Reset the cancellation flag
+
     try:
         # Step 1: Convert Speech to Text
         wav_audio = await convert_to_wav(audio)
@@ -161,6 +173,9 @@ async def conversation_audio_stream(audio: UploadFile):
         # Step 2: Generate Text Response
         response_text = ""
         async for chunk in chatbot.process_input("default_user", user_input):
+            if cancel_event.is_set():
+                print("Processing cancelled")
+                return
             response_text += chunk
         
         # Tokenize into sentences
@@ -169,44 +184,31 @@ async def conversation_audio_stream(audio: UploadFile):
         
         # Stream individual WAV chunks with controlled chunk size
         async def generate_wav_chunks():
-            for i, sentence in enumerate(sentences):
-                temp_filename = f"chunk_{i}.wav"
-                temp_files.append(temp_filename)
-                
-                # Generate WAV file for each sentence
-                tts_model.tts_to_file(text=sentence, file_path=temp_filename)
-                
-                # Read the entire WAV file
-                with open(temp_filename, 'rb') as wav_file:
-                    chunk_data = wav_file.read()
-                    
-                    # Split large chunks into smaller, manageable sizes
-                    max_chunk_size = 100 * 1024  # 100 KB chunks
-                    for j in range(0, len(chunk_data), max_chunk_size):
-                        chunk = chunk_data[j:j+max_chunk_size]
-                        
-                        # Ensure first chunk keeps the WAV header
-                        if j == 0:
-                            print(f"Chunk {i}-{j} size: {len(chunk)} bytes")
-                            print(f"First 20 bytes: {chunk[:20]}")
-                            print(f"Is valid WAV: {chunk[:4] == b'RIFF'}")
-                            yield chunk
-                        else:
-                            # For subsequent chunks, only yield the audio data
-                            yield chunk
+            if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return  # Stop chunk generation immediately if interrupted
+            for sentence in sentences:
+                if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return  # Stop chunk generation immediately if interrupted
+                buffer = BytesIO()
+                tts_model.tts_to_file(text=sentence, file_path=buffer)
+                buffer.seek(0)
+                chunk_data = buffer.read()
+                max_chunk_size = 100 * 1024  # 100 KB
 
-                time.sleep(0.01)  # Short delay for the generator to finish reading
-                try:
-                    os.remove(temp_filename)
-                    print(f"Deleted {temp_filename}")
-                except OSError as e:
-                    print(f"Error deleting {temp_filename}: {e}")
-        
+                for i in range(0, len(chunk_data), max_chunk_size):
+                    if cancel_event.is_set():
+                        print("Streaming cancelled during chunk generation")
+                        return
+                    chunk = chunk_data[i:i+max_chunk_size]
+                    if i == 0:
+                        print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
+                    yield chunk
+               
         # Return a streaming response with individual WAV chunks
-        return StreamingResponse(
-            generate_wav_chunks(), 
-            media_type="audio/wav"
-        )
+        return StreamingResponse(generate_wav_chunks(), media_type="audio/wav")
+
     
     
     except Exception as e:    
@@ -214,14 +216,6 @@ async def conversation_audio_stream(audio: UploadFile):
         import traceback
         traceback.print_exc()
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
-    finally:
-        # Clean up temporary files
-        for temp_file in temp_files:
-            try:
-                os.remove(temp_file)
-            except Exception as cleanup_error:
-                print(f"Error cleaning up temp file {temp_file}: {cleanup_error}")
-
 
 
 if __name__ == "__main__":
