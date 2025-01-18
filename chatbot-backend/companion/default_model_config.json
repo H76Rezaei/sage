@@ -1,0 +1,7 @@
+{
+    "model": "llama3.2:1b",
+    "temperature": 0.5,
+    "max_tokens": 100,
+    "top_p": 0.7,
+    "stream": true
+}
