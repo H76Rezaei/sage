@@ -1,4 +1,4 @@
-# backend/auth.py
+
 from fastapi import HTTPException
 from backend.supabase_client import supabase
 from passlib.context import CryptContext
