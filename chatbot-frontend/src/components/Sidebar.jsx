@@ -1,8 +1,15 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+
+  const handleLoginClick = () => {
+    toggleSidebar();
+    navigate("/login");
+  };
+
   return (
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
       {/* Close Button for Mobile */}
@@ -54,14 +61,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       <div className="bottomSection">
         <div className="profile">
-          <img
-            src="https://via.placeholder.com/50"
-            alt="User Avatar"
-            className="avatar"
-          />
           <p>Guest User</p>
         </div>
-        <button className="loginButton">Login/Sign Up</button>
+        <button className="loginButton" onClick={handleLoginClick}>
+          Login/Sign Up
+        </button>
       </div>
     </div>
   );

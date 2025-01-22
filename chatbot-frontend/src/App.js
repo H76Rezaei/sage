@@ -11,6 +11,10 @@ import VoiceHistory from "./components/VoiceHistory";
 import AboutMe from "./components/AboutMe";
 import MedicationReminder from "./components/MedicationReminder";
 
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Profile from "./components/Profile";
+
 import { sendConversation } from "./services/textApi";
 import { sendAudioToBackend } from "./services/speechApi";
 
@@ -103,6 +107,9 @@ function App() {
             />
             <Route path="/about" element={<AboutMe />} />
             <Route path="/reminders" element={<MedicationReminder />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </div>
       </div>
