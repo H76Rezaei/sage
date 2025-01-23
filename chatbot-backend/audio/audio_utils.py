@@ -72,7 +72,7 @@ def convert_wav_to_mp3(wav_file, mp3_file):
 
 async def conversation_audio(audio: UploadFile, chatbot):
     """
-    Complete audio-to-audio conversation pipeline.
+    Complete audio-to-audio conversation pipeline. (no streaming)
     
     Workflow:
     1. Convert audio to WAV
