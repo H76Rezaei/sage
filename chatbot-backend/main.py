@@ -1,12 +1,15 @@
 from fastapi import FastAPI, Request, BackgroundTasks, UploadFile
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from audio.audio_utils import (
-    conversation_audio,
-    cancel_stream,
-    conversation_audio_stream,
-)
+import json
 from companion.digital_companion import DigitalCompanion
+from audio.audio_utils import (
+    conversation_audio, 
+    conversation_audio_stream, 
+    cancel_stream
+)
+
+chatbot = DigitalCompanion()
 
 app = FastAPI()
 
@@ -18,9 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-chatbot = DigitalCompanion()
-
 
 @app.post("/conversation")
 async def conversation(request: Request):
@@ -38,21 +38,17 @@ async def conversation(request: Request):
         media_type="text/event-stream"
     )
 
-
 @app.post("/conversation-audio")
 async def handle_conversation_audio(audio: UploadFile):
-    return await conversation_audio(audio)
-
+    return await conversation_audio(audio, chatbot)
 
 @app.post("/cancel")
 async def handle_cancel_stream():
     return await cancel_stream()
 
-
 @app.post("/conversation-audio-stream")
 async def handle_conversation_audio_stream(audio: UploadFile, background_tasks: BackgroundTasks):
-    return await conversation_audio_stream(audio, background_tasks)
-
+    return await conversation_audio_stream(audio, background_tasks, chatbot)
 
 if __name__ == "__main__":
     import uvicorn
