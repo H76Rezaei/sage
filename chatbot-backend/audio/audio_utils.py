@@ -9,6 +9,10 @@ from audio.speech import voice_to_text, new_tts
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
 import torch
+import re
+import nltk
+
+nltk.download('punkt')
 
 device= ("cuda" if torch.cuda.is_available() 
             else "mps" if torch.backends.mps.is_available() 
@@ -75,6 +79,16 @@ def convert_wav_to_mp3(wav_file, mp3_file):
     audio = AudioSegment.from_wav(wav_file)
     audio.export(mp3_file, format="mp3")
 
+
+def preprocess_text(text):
+    """Preprocesses text for TTS to handle special characters and formatting."""
+
+    text = text.replace("’", "'")  # Replace curly apostrophes
+    text = text.replace("…", "...")  # Replace ellipsis character
+    text = re.sub(r"[^\w\s.,?!]", "", text)  # Keep word chars, whitespace, and basic punctuation
+    text = re.sub(r"\s+", " ", text).strip()  # Remove extra whitespace
+    return text
+
 async def conversation_audio(audio: UploadFile, chatbot):
     """
     Complete audio-to-audio conversation pipeline. (no streaming)
@@ -112,6 +126,8 @@ async def conversation_audio(audio: UploadFile, chatbot):
             response_text += chunk
 
         print(f"Generated response: {response_text}")
+        response_text = preprocess_text(response_text)
+        print(f"Processed response: {response_text}")
 
         # Validate response text
         if not response_text.strip():
@@ -187,6 +203,8 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
                 return
             response_text += chunk
         
+        response_text = preprocess_text(response_text)
+        print(f"Processed response: {response_text}")
         # Tokenize response into sentences
         sentences = sent_tokenize(response_text)
         print(f"Generated sentences: {sentences}")

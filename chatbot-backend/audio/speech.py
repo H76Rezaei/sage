@@ -13,15 +13,17 @@ import numpy as np
 import whisper
 
 
-
-tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
+device= ("cuda" if torch.cuda.is_available() 
+            else "mps" if torch.backends.mps.is_available() 
+            else "cpu")
+tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC").to(device)
 
 #list available speakers
 print("Available speakers:", tts_model.speakers)
 
 
 # Load the Whisper model (choose 'tiny', 'base', 'small', 'large')
-model = whisper.load_model("base")
+model = whisper.load_model("base").to(device)
 
 
 def downsample_audio(audio_data: BytesIO) -> BytesIO:
