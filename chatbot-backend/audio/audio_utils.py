@@ -8,9 +8,14 @@ import asyncio
 from audio.speech import voice_to_text, new_tts
 from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
+import torch
+
+device= ("cuda" if torch.cuda.is_available() 
+            else "mps" if torch.backends.mps.is_available() 
+            else "cpu")
 
 # Initialize Coqui TTS model for text-to-speech conversion
-tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
+tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC").to(device)
 
 # Global event to manage stream cancellation
 cancel_event = asyncio.Event()
