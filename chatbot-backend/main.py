@@ -6,8 +6,11 @@ from companion.digital_companion import DigitalCompanion
 from audio.audio_utils import (
     conversation_audio, 
     conversation_audio_stream, 
-    cancel_stream
+    cancel_stream,
+    conversation_audio_stream_kokoro
 )
+import subprocess
+from fastapi.responses import FileResponse
 
 # Initialize digital companion chatbot
 chatbot = DigitalCompanion()
@@ -90,7 +93,7 @@ async def handle_conversation_audio_stream(audio: UploadFile, background_tasks: 
     2. Generate streaming chatbot response
     3. Stream text-to-speech audio chunks
     """
-    return await conversation_audio_stream(audio, background_tasks, chatbot)
+    return await conversation_audio_stream_kokoro(audio, background_tasks, chatbot)
 
 if __name__ == "__main__":
     # Run FastAPI application using Uvicorn ASGI server
