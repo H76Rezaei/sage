@@ -11,6 +11,9 @@ from nltk.tokenize import sent_tokenize
 import torch
 import re
 import nltk
+from threading import Event
+import subprocess
+import os
 
 nltk.download('punkt')
 
@@ -251,4 +254,109 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         print(f"Error in audio processing: {str(e)}")
         import traceback
         traceback.print_exc()
+        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+    
+
+async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: BackgroundTasks, chatbot):
+    """
+    Streaming audio-to-audio conversation with cancellation support, using Kokoro ONNX for TTS.
+    
+    Workflow:
+    1. Convert audio to WAV
+    2. Perform speech-to-text
+    3. Generate text response
+    4. Stream text-to-speech audio chunks using Kokoro ONNX
+    
+    Args:
+        audio (UploadFile): Input audio file
+        background_tasks (BackgroundTasks): FastAPI background tasks
+        chatbot: Conversational AI companion
+    
+    Returns:
+        StreamingResponse of audio chunks
+    """
+    # Reset cancellation flag
+    cancel_event.clear()
+
+    try:
+        # Convert input audio to WAV
+        wav_audio = await convert_to_wav(audio)
+        
+        # Perform speech-to-text recognition
+        stt_result = voice_to_text(wav_audio)
+        if not stt_result["success"]:
+            return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
+        
+        # Extract transcribed text
+        user_input = stt_result["text"]
+        print(f"User said: {user_input}")
+        
+        # Generate AI response
+        response_text = ""
+        async for chunk in chatbot.stream_workflow_response(user_input):
+            # Check for cancellation during response generation
+            if cancel_event.is_set():
+                print("Processing cancelled")
+                return
+            response_text += chunk
+        
+        response_text = preprocess_text(response_text)
+        print(f"Processed response: {response_text}")
+        
+        # Tokenize response into sentences
+        sentences = sent_tokenize(response_text)
+        print(f"Generated sentences: {sentences}")
+        
+        # Stream audio chunks
+        async def generate_wav_chunks():
+            # Check for early cancellation
+            if cancel_event.is_set():
+                print("Chunk generation cancelled")
+                return
+
+            # Generate audio for each sentence using Kokoro ONNX
+            for sentence in sentences:
+                # Check cancellation between sentences
+                if cancel_event.is_set():
+                    print("Chunk generation cancelled")
+                    return
+                
+                # Generate WAV using Kokoro ONNX subprocess
+                buffer = BytesIO()
+                output_wav_path = "output.wav"
+                subprocess.run(
+                    [
+                        "python", "audio/kokoro_bridge.py",
+                        sentence,
+                        output_wav_path
+                    ],
+                    check=True
+                )
+
+                # Load the WAV file into memory
+                with open(output_wav_path, "rb") as wav_file:
+                    chunk_data = wav_file.read()
+                
+                # Remove the file after use
+                os.remove(output_wav_path)
+
+                max_chunk_size = 100 * 1024  # 100 KB chunk size
+
+                # Yield audio chunks
+                for i in range(0, len(chunk_data), max_chunk_size):
+                    # Check cancellation during chunk generation
+                    if cancel_event.is_set():
+                        print("Streaming cancelled during chunk generation")
+                        return
+                    
+                    chunk = chunk_data[i:i+max_chunk_size]
+                    # Log first chunk header for debugging
+                    if i == 0:
+                        print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
+                    yield chunk
+               
+        # Return streaming WAV audio response
+        return StreamingResponse(generate_wav_chunks(), media_type="audio/wav")
+
+    except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
