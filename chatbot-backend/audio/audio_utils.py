@@ -14,6 +14,9 @@ import nltk
 from threading import Event
 import subprocess
 import os
+from dotenv import load_dotenv
+
+load_dotenv() 
 
 nltk.download('punkt')
 
@@ -257,106 +260,166 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
     
 
+
+async def generate_audio_async(text, output_queue, cancel_event):
+    try:
+        kokoro_venv_path = os.getenv("KOKORO_VENV_PATH")
+        print(f"KOKORO_VENV_PATH: {kokoro_venv_path}")  # Get path from env variable
+        if not kokoro_venv_path:
+            raise ValueError("KOKORO_VENV_PATH environment variable not set.")
+
+        python_executable = os.path.join(kokoro_venv_path, "Scripts", "python.exe")  
+        print(f"Using Kokoro Python: {python_executable}") 
+        if not os.path.exists(python_executable):
+            raise ValueError(f"Python executable not found in Kokoro venv: {kokoro_venv_path}")
+        
+        audio_dir = os.path.dirname(os.path.abspath(__file__))  
+        print(f"audio dir: {audio_dir}")
+        print(os.path.join(audio_dir, "kokoro_bridge.py"))
+
+        process = await asyncio.create_subprocess_exec(
+            python_executable,
+            os.path.join(audio_dir, "kokoro_bridge.py"),
+            text,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=audio_dir,
+        )
+
+        while True:
+            if cancel_event.is_set(): # Check cancellation frequently
+                process.kill()  # Kill the subprocess if cancelled
+                print("Kokoro TTS cancelled.")
+                return # Exit gracefully
+            chunk = await process.stdout.readline()
+            if not chunk:
+                break
+
+            output_queue.put_nowait(chunk)
+
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            error_message = stderr.decode() if stderr else "Kokoro TTS failed"
+            print(f"Kokoro TTS error: {error_message}")
+            output_queue.put_nowait(json.dumps({"error": error_message}).encode())
+        else:
+            output_queue.put_nowait(b"__END__")
+
+    except Exception as e:
+        print(f"Error in generate_audio_async: {e}")
+        output_queue.put_nowait(json.dumps({"error": str(e)}).encode())
+
+async def generate_wav_chunks(sentences, cancel_event):  
+    for sentence in sentences:
+        if cancel_event.is_set():
+            print("Chunk generation cancelled.")
+            return
+
+        output_queue = asyncio.Queue()
+        task = asyncio.create_task(generate_audio_async(sentence, output_queue, cancel_event))
+
+       
+        try:
+            buffer = BytesIO()
+            json_error_received = False
+
+            while True:
+                item = await output_queue.get()
+                if isinstance(item, bytes):
+                    if item == b"__END__":
+                        break
+
+                    # Check for JSON *FIRST* before assuming audio
+                    if not json_error_received:
+                        try:
+                            error_dict = json.loads(item.decode())  # Try to decode as JSON
+                            if "error" in error_dict:
+                                print(f"Kokoro reported error: {error_dict['error']}")
+                                yield json.dumps({"error": error_dict['error']}).encode() # Yield the error
+                                json_error_received = True
+                                break  # Stop processing this sentence after error
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            # If JSON decoding fails, assume it's audio and proceed
+                            pass # Do not yield the error message here, it's audio
+
+                    if not json_error_received: # Only write if no JSON error was received
+                        buffer.write(item)
+
+                    # If a JSON error was received, ignore any subsequent audio chunks
+                    elif json_error_received:
+                        pass
+
+                else:
+                    print("Unexpected item in queue:", item)
+                output_queue.task_done()
+
+            buffer.seek(0)
+            chunk_data = buffer.read() # Read the entire audio at once
+
+            yield chunk_data
+            
+            """
+            buffer.seek(0)
+            chunk_data = buffer.read()
+            max_chunk_size = 100 * 1024
+
+            for i in range(0, len(chunk_data), max_chunk_size):
+                if cancel_event.is_set():
+                    print("Streaming cancelled during chunk generation")
+                    return
+
+                chunk = chunk_data[i:i + max_chunk_size]
+                if i == 0:
+                    print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
+                yield chunk
+            """    
+
+        except Exception as e:
+            print(f"Error during streaming: {e}")
+            yield json.dumps({"error": str(e)}).encode()
+        finally:
+            await output_queue.join()
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
 async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: BackgroundTasks, chatbot):
-    """
-    Streaming audio-to-audio conversation with cancellation support, using Kokoro ONNX for TTS.
-    
-    Workflow:
-    1. Convert audio to WAV
-    2. Perform speech-to-text
-    3. Generate text response
-    4. Stream text-to-speech audio chunks using Kokoro ONNX
-    
-    Args:
-        audio (UploadFile): Input audio file
-        background_tasks (BackgroundTasks): FastAPI background tasks
-        chatbot: Conversational AI companion
-    
-    Returns:
-        StreamingResponse of audio chunks
-    """
     # Reset cancellation flag
     cancel_event.clear()
 
     try:
-        # Convert input audio to WAV
         wav_audio = await convert_to_wav(audio)
-        
-        # Perform speech-to-text recognition
         stt_result = voice_to_text(wav_audio)
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-        
-        # Extract transcribed text
+
         user_input = stt_result["text"]
         print(f"User said: {user_input}")
-        
-        # Generate AI response
+
         response_text = ""
         async for chunk in chatbot.stream_workflow_response(user_input):
-            # Check for cancellation during response generation
             if cancel_event.is_set():
                 print("Processing cancelled")
-                return
+                return  # Return immediately if cancelled
             response_text += chunk
-        
+
         response_text = preprocess_text(response_text)
         print(f"Processed response: {response_text}")
-        
-        # Tokenize response into sentences
+
         sentences = sent_tokenize(response_text)
         print(f"Generated sentences: {sentences}")
-        
-        # Stream audio chunks
-        async def generate_wav_chunks():
-            # Check for early cancellation
-            if cancel_event.is_set():
-                print("Chunk generation cancelled")
-                return
 
-            # Generate audio for each sentence using Kokoro ONNX
-            for sentence in sentences:
-                # Check cancellation between sentences
-                if cancel_event.is_set():
-                    print("Chunk generation cancelled")
+        async def generate():
+            async for chunk in generate_wav_chunks(sentences, cancel_event): # Pass cancel_event
+                if cancel_event.is_set(): # Check cancellation during chunk generation
+                    print("Streaming cancelled during chunk generation")
                     return
-                
-                # Generate WAV using Kokoro ONNX subprocess
-                buffer = BytesIO()
-                output_wav_path = "output.wav"
-                subprocess.run(
-                    [
-                        "python", "kokoro_bridge.py",
-                        sentence,
-                        output_wav_path
-                    ],
-                    check=True
-                )
+                yield chunk
 
-                # Load the WAV file into memory
-                with open(output_wav_path, "rb") as wav_file:
-                    chunk_data = wav_file.read()
-                
-                # Remove the file after use
-                os.remove(output_wav_path)
-
-                max_chunk_size = 100 * 1024  # 100 KB chunk size
-
-                # Yield audio chunks
-                for i in range(0, len(chunk_data), max_chunk_size):
-                    # Check cancellation during chunk generation
-                    if cancel_event.is_set():
-                        print("Streaming cancelled during chunk generation")
-                        return
-                    
-                    chunk = chunk_data[i:i+max_chunk_size]
-                    # Log first chunk header for debugging
-                    if i == 0:
-                        print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
-                    yield chunk
-               
-        # Return streaming WAV audio response
-        return StreamingResponse(generate_wav_chunks(), media_type="audio/wav")
+        return StreamingResponse(generate(), media_type="audio/wav")
 
     except Exception as e:
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
