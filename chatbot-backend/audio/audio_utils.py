@@ -15,6 +15,8 @@ from threading import Event
 import subprocess
 import os
 from dotenv import load_dotenv
+import soundfile as sf
+import numpy as np
 
 load_dotenv() 
 
@@ -286,24 +288,22 @@ async def generate_audio_async(text, output_queue, cancel_event):
             cwd=audio_dir,
         )
 
-        while True:
-            if cancel_event.is_set(): # Check cancellation frequently
-                process.kill()  # Kill the subprocess if cancelled
-                print("Kokoro TTS cancelled.")
-                return # Exit gracefully
-            chunk = await process.stdout.readline()
-            if not chunk:
-                break
-
-            output_queue.put_nowait(chunk)
-
+        audio_data = await process.stdout.read() # Read all bytes at once
         stdout, stderr = await process.communicate()
+
         if process.returncode != 0:
             error_message = stderr.decode() if stderr else "Kokoro TTS failed"
-            print(f"Kokoro TTS error: {error_message}")
-            output_queue.put_nowait(json.dumps({"error": error_message}).encode())
-        else:
-            output_queue.put_nowait(b"__END__")
+            print(f"Kokoro TTS error: {error_message}", file=sys.stderr) # Print errors to stderr
+            output_queue.put_nowait(json.dumps({"error": error_message}).encode()) # Still send errors as JSON
+            return
+
+        if not audio_data:
+            print("No audio data received from Kokoro.", file=sys.stderr)
+            output_queue.put_nowait(json.dumps({"error": "No audio data received"}).encode())
+            return
+
+        output_queue.put_nowait(audio_data)
+        output_queue.put_nowait(b"__END__")
 
     except Exception as e:
         print(f"Error in generate_audio_async: {e}")
@@ -320,59 +320,40 @@ async def generate_wav_chunks(sentences, cancel_event):
 
        
         try:
-            buffer = BytesIO()
-            json_error_received = False
+            item = await output_queue.get()
+            samples, sample_rate = sf.read(BytesIO(item))
+            if isinstance(item, bytes):
+                if item == b"__END__":
+                    continue  # Skip the __END__ marker
+                try:
+                    # 1. Try to load as JSON to check for errors
+                    error_dict = json.loads(item.decode())
+                    if "error" in error_dict:
+                        print(f"Kokoro error: {error_dict['error']}")
+                        yield item # Yield the error as is
+                        continue  # Skip to the next sentence
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    pass  # It's audio data
 
-            while True:
-                item = await output_queue.get()
-                if isinstance(item, bytes):
-                    if item == b"__END__":
-                        break
+                # 2. Process audio data:
+                try:
+                    # Get sample rate and other info (you might need to adjust this)
+                    samples, sample_rate = sf.read(BytesIO(item))  # Read the complete audio data
+                    print(f"Sample Rate: {sample_rate}, Data Shape: {samples.shape}, Data Type: {samples.dtype}")
 
-                    # Check for JSON *FIRST* before assuming audio
-                    if not json_error_received:
-                        try:
-                            error_dict = json.loads(item.decode())  # Try to decode as JSON
-                            if "error" in error_dict:
-                                print(f"Kokoro reported error: {error_dict['error']}")
-                                yield json.dumps({"error": error_dict['error']}).encode() # Yield the error
-                                json_error_received = True
-                                break  # Stop processing this sentence after error
-                        except (json.JSONDecodeError, UnicodeDecodeError):
-                            # If JSON decoding fails, assume it's audio and proceed
-                            pass # Do not yield the error message here, it's audio
+                    # Ensure it is 16 bit
+                    if samples.dtype != np.int16:
+                        samples = (samples * 32767).astype(np.int16) # convert to int16
 
-                    if not json_error_received: # Only write if no JSON error was received
-                        buffer.write(item)
+                    audio_buffer = BytesIO()
+                    sf.write(audio_buffer, samples, sample_rate, format='WAV')
+                    audio_buffer.seek(0)
+                    wav_data = audio_buffer.getvalue()
+                    yield wav_data  # Yield the complete wav data
 
-                    # If a JSON error was received, ignore any subsequent audio chunks
-                    elif json_error_received:
-                        pass
-
-                else:
-                    print("Unexpected item in queue:", item)
-                output_queue.task_done()
-
-            buffer.seek(0)
-            chunk_data = buffer.read() # Read the entire audio at once
-
-            yield chunk_data
-            
-            """
-            buffer.seek(0)
-            chunk_data = buffer.read()
-            max_chunk_size = 100 * 1024
-
-            for i in range(0, len(chunk_data), max_chunk_size):
-                if cancel_event.is_set():
-                    print("Streaming cancelled during chunk generation")
-                    return
-
-                chunk = chunk_data[i:i + max_chunk_size]
-                if i == 0:
-                    print(f"First chunk includes header: {chunk[:4] == b'RIFF'}")
-                yield chunk
-            """    
+                except Exception as e:
+                    print(f"Error processing audio with soundfile: {e}")
+                    yield json.dumps({"error": f"Audio processing error: {str(e)}"}).encode()
 
         except Exception as e:
             print(f"Error during streaming: {e}")

@@ -4,23 +4,37 @@ import os
 import soundfile as sf
 from io import BytesIO
 from pydub import AudioSegment
+import json
+import numpy as np
 
 def generate_audio(text):
-    model = Kokoro("kokoro-v0_19.onnx", "voices.bin") # Initialize Kokoro (once per process)
-    samples, sample_rate = model.create(text, voice="af_nicole", speed=1.0, lang="en-us")
-    buffer = BytesIO()
-    audio_segment = AudioSegment(samples.tobytes(), frame_rate=sample_rate, sample_width=samples.dtype.itemsize, channels=1) # Assuming mono audio
-    audio_segment.export(buffer, format="wav")
-    buffer.seek(0)
-    audio_bytes = buffer.getvalue()
-    return audio_bytes
+    try:
+        model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+        samples, sample_rate = model.create(text, voice="af_nicole", speed=1.0, lang="en-us")
+
+        samples = (samples * 32767).astype(np.int16)
+        if samples.ndim > 1:
+            samples = np.mean(samples, axis=1)
+
+        audio_buffer = BytesIO()  # Use BytesIO to store audio in memory
+        sf.write(audio_buffer, samples, sample_rate, format='WAV')
+        audio_buffer.seek(0)
+        audio_bytes = audio_buffer.getvalue()
+
+        sys.stdout.buffer.write(audio_bytes)  # Write raw bytes to stdout
+        return None  # No text message to return
+
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)  # Print errors to stderr
+        return f"Error: {e}"  # Return error message (for debugging)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python kokoro_bridge.py <text>")
+        print("Usage: python kokoro_bridge.py <text>", file=sys.stderr)
         sys.exit(1)
 
     input_text = sys.argv[1]
-    audio_bytes = generate_audio(input_text)
-
-    sys.stdout.buffer.write(audio_bytes) # Write audio bytes to stdout
+    result = generate_audio(input_text)
+    if result:  # If there was an error
+        print(result, file=sys.stderr) # Print the error to stderr
+        sys.exit(1) # Indicate failure
