@@ -22,6 +22,7 @@ def generate_audio(text):
         audio_bytes = audio_buffer.getvalue()
 
         sys.stdout.buffer.write(audio_bytes)  # Write raw bytes to stdout
+        sys.stdout.buffer.write(b"\n")
         return None  # No text message to return
 
     except Exception as e:

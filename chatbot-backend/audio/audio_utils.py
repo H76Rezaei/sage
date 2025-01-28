@@ -17,6 +17,12 @@ import os
 from dotenv import load_dotenv
 import soundfile as sf
 import numpy as np
+import sys
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 load_dotenv() 
 
@@ -263,22 +269,17 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
     
 
 
-async def generate_audio_async(text, output_queue, cancel_event):
+async def generate_audio_async(text):
+    """Simplified audio generation function that returns the audio data directly"""
     try:
         kokoro_venv_path = os.getenv("KOKORO_VENV_PATH")
-        print(f"KOKORO_VENV_PATH: {kokoro_venv_path}")  # Get path from env variable
         if not kokoro_venv_path:
             raise ValueError("KOKORO_VENV_PATH environment variable not set.")
-
-        python_executable = os.path.join(kokoro_venv_path, "Scripts", "python.exe")  
-        print(f"Using Kokoro Python: {python_executable}") 
-        if not os.path.exists(python_executable):
-            raise ValueError(f"Python executable not found in Kokoro venv: {kokoro_venv_path}")
         
-        audio_dir = os.path.dirname(os.path.abspath(__file__))  
-        print(f"audio dir: {audio_dir}")
-        print(os.path.join(audio_dir, "kokoro_bridge.py"))
-
+        python_executable = os.path.join(kokoro_venv_path, "Scripts", "python.exe")
+        audio_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        print(f"Generating audio for: {text}")
         process = await asyncio.create_subprocess_exec(
             python_executable,
             os.path.join(audio_dir, "kokoro_bridge.py"),
@@ -287,120 +288,110 @@ async def generate_audio_async(text, output_queue, cancel_event):
             stderr=asyncio.subprocess.PIPE,
             cwd=audio_dir,
         )
-
-        audio_data = await process.stdout.read() # Read all bytes at once
+        
         stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_message = stderr.decode() if stderr else "Kokoro TTS failed"
-            print(f"Kokoro TTS error: {error_message}", file=sys.stderr) # Print errors to stderr
-            output_queue.put_nowait(json.dumps({"error": error_message}).encode()) # Still send errors as JSON
-            return
-
-        if not audio_data:
-            print("No audio data received from Kokoro.", file=sys.stderr)
-            output_queue.put_nowait(json.dumps({"error": "No audio data received"}).encode())
-            return
-
-        output_queue.put_nowait(audio_data)
-        output_queue.put_nowait(b"__END__")
-
+        
+        if stderr:
+            print(f"Error from Kokoro: {stderr.decode()}")
+            return None
+            
+        if not stdout:
+            print("No audio data received")
+            return None
+            
+        return stdout
+        
     except Exception as e:
-        print(f"Error in generate_audio_async: {e}")
-        output_queue.put_nowait(json.dumps({"error": str(e)}).encode())
+        print(f"Error generating audio: {e}")
+        return None
 
-async def generate_wav_chunks(sentences, cancel_event):  
+async def generate_wav_chunks(sentences, cancel_event):
+    """Generate audio chunks for each sentence with explicit delays"""
     for sentence in sentences:
         if cancel_event.is_set():
-            print("Chunk generation cancelled.")
             return
-
-        output_queue = asyncio.Queue()
-        task = asyncio.create_task(generate_audio_async(sentence, output_queue, cancel_event))
-
-       
+            
+        print(f"Processing sentence: {sentence}")
+        audio_data = await generate_audio_async(sentence)
+        
+        if audio_data is None:
+            print(f"Failed to generate audio for: {sentence}")
+            continue
+            
         try:
-            item = await output_queue.get()
-            samples, sample_rate = sf.read(BytesIO(item))
-            if isinstance(item, bytes):
-                if item == b"__END__":
-                    continue  # Skip the __END__ marker
-                try:
-                    # 1. Try to load as JSON to check for errors
-                    error_dict = json.loads(item.decode())
-                    if "error" in error_dict:
-                        print(f"Kokoro error: {error_dict['error']}")
-                        yield item # Yield the error as is
-                        continue  # Skip to the next sentence
-                except (json.JSONDecodeError, UnicodeDecodeError):
-                    pass  # It's audio data
-
-                # 2. Process audio data:
-                try:
-                    # Get sample rate and other info (you might need to adjust this)
-                    samples, sample_rate = sf.read(BytesIO(item))  # Read the complete audio data
-                    print(f"Sample Rate: {sample_rate}, Data Shape: {samples.shape}, Data Type: {samples.dtype}")
-
-                    # Ensure it is 16 bit
-                    if samples.dtype != np.int16:
-                        samples = (samples * 32767).astype(np.int16) # convert to int16
-
-                    audio_buffer = BytesIO()
-                    sf.write(audio_buffer, samples, sample_rate, format='WAV')
-                    audio_buffer.seek(0)
-                    wav_data = audio_buffer.getvalue()
-                    yield wav_data  # Yield the complete wav data
-
-                except Exception as e:
-                    print(f"Error processing audio with soundfile: {e}")
-                    yield json.dumps({"error": f"Audio processing error: {str(e)}"}).encode()
-
+            # Convert the raw audio data to WAV format
+            audio_buffer = BytesIO(audio_data)
+            samples, sample_rate = sf.read(audio_buffer)
+            
+            # Ensure samples are in the correct format
+            if samples.dtype != np.int16:
+                samples = (samples * 32767).astype(np.int16)
+            
+            # Write as WAV
+            output_buffer = BytesIO()
+            sf.write(output_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
+            output_buffer.seek(0)
+            wav_data = output_buffer.getvalue()
+            
+            print(f"Generated WAV data length: {len(wav_data)}")
+            yield wav_data
+            
+            # Add a small delay between sentences
+            await asyncio.sleep(0.1)
+            
         except Exception as e:
-            print(f"Error during streaming: {e}")
-            yield json.dumps({"error": str(e)}).encode()
-        finally:
-            await output_queue.join()
-            if not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+            print(f"Error processing audio: {e}")
+            continue
 
 async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: BackgroundTasks, chatbot):
-    # Reset cancellation flag
     cancel_event.clear()
-
     try:
         wav_audio = await convert_to_wav(audio)
         stt_result = voice_to_text(wav_audio)
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-
+        
         user_input = stt_result["text"]
-        print(f"User said: {user_input}")
-
+        print(f"Processing user input: {user_input}")
+        
+        # Collect the entire response first
         response_text = ""
         async for chunk in chatbot.stream_workflow_response(user_input):
             if cancel_event.is_set():
-                print("Processing cancelled")
-                return  # Return immediately if cancelled
+                return
             response_text += chunk
-
+        
         response_text = preprocess_text(response_text)
-        print(f"Processed response: {response_text}")
-
+        print(f"Full response: {response_text}")
+        
         sentences = sent_tokenize(response_text)
-        print(f"Generated sentences: {sentences}")
-
-        async def generate():
-            async for chunk in generate_wav_chunks(sentences, cancel_event): # Pass cancel_event
-                if cancel_event.is_set(): # Check cancellation during chunk generation
-                    print("Streaming cancelled during chunk generation")
-                    return
-                yield chunk
-
-        return StreamingResponse(generate(), media_type="audio/wav")
-
+        print(f"Sentences to process: {sentences}")
+        
+        # Create a single combined audio stream
+        audio_chunks = []
+        async for chunk in generate_wav_chunks(sentences, cancel_event):
+            audio_chunks.append(chunk)
+        
+        if not audio_chunks:
+            return JSONResponse(content={"error": "No audio generated"}, status_code=500)
+        
+        # Combine all chunks into a single WAV file
+        combined_buffer = BytesIO()
+        first_chunk = BytesIO(audio_chunks[0])
+        first_audio, sample_rate = sf.read(first_chunk)
+        
+        all_audio = [first_audio]
+        for chunk in audio_chunks[1:]:
+            chunk_buffer = BytesIO(chunk)
+            audio_data, _ = sf.read(chunk_buffer)
+            all_audio.append(audio_data)
+        
+        combined_audio = np.concatenate(all_audio)
+        sf.write(combined_buffer, combined_audio, sample_rate, format='WAV', subtype='PCM_16')
+        combined_buffer.seek(0)
+        
+        return StreamingResponse(combined_buffer, media_type="audio/wav")
+        
     except Exception as e:
-        return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
+        print(f"Error in conversation stream: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
