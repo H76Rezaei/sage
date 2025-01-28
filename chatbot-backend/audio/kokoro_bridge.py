@@ -7,14 +7,15 @@ from pydub import AudioSegment
 import json
 import numpy as np
 
+
+
+model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+
 def generate_audio(text):
     try:
-        model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
-        samples, sample_rate = model.create(text, voice="af_nicole", speed=1.0, lang="en-us")
+        
+        samples, sample_rate = model.create(text, voice="af_sky", speed=1.0, lang="en-us")
 
-        samples = (samples * 32767).astype(np.int16)
-        if samples.ndim > 1:
-            samples = np.mean(samples, axis=1)
 
         audio_buffer = BytesIO()  # Use BytesIO to store audio in memory
         sf.write(audio_buffer, samples, sample_rate, format='WAV')
@@ -23,7 +24,7 @@ def generate_audio(text):
 
         sys.stdout.buffer.write(audio_bytes)  # Write raw bytes to stdout
         sys.stdout.buffer.write(b"\n")
-        return None  # No text message to return
+        return None  
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)  # Print errors to stderr
