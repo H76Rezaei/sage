@@ -270,7 +270,7 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
 
 
 async def generate_audio_async(text):
-    """Generate audio for a single sentence"""
+    """Generate audio for a single chunk of text"""
     try:
         kokoro_venv_path = os.getenv("KOKORO_VENV_PATH")
         python_executable = os.path.join(kokoro_venv_path, "Scripts", "python.exe")
@@ -296,7 +296,7 @@ async def generate_audio_async(text):
             print("No audio data received")
             return None
             
-        # Convert to WAV format immediately
+        # Convert to WAV format
         audio_buffer = BytesIO(stdout)
         samples, sample_rate = sf.read(audio_buffer)
         
@@ -307,42 +307,22 @@ async def generate_audio_async(text):
         sf.write(output_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
         output_buffer.seek(0)
         
-        return output_buffer.getvalue(), len(samples)
+        return output_buffer.getvalue()
         
     except Exception as e:
         print(f"Error generating audio: {e}")
-        return None, 0
+        return None
 
-async def process_sentences_parallel(sentences, cancel_event):
-    """Process all sentences in parallel while maintaining order"""
-    async def process_sentence(text, index):
+async def stream_audio_chunks(sentences, cancel_event):
+    """Generate and stream audio chunks one by one"""
+    for sentence in sentences:
         if cancel_event.is_set():
-            return None, index, 0
-        wav_data, length = await generate_audio_async(text)
-        return wav_data, index, length
-
-    # Create tasks for all sentences
-    tasks = [
-        asyncio.create_task(process_sentence(sentence, i))
-        for i, sentence in enumerate(sentences)
-    ]
-    
-    # Process results in order
-    all_audio = []
-    total_length = 0
-    
-    for task in tasks:
-        if cancel_event.is_set():
-            break
-            
-        wav_data, index, length = await task
-        if wav_data:
-            all_audio.append((index, wav_data, length))
-            total_length += length
-    
-    # Sort by original index
-    all_audio.sort(key=lambda x: x[0])
-    return [audio[1] for audio in all_audio]
+            return
+        print("Current sentence to process:", sentence)    
+        audio_data = await generate_audio_async(sentence)
+        if audio_data:
+            yield audio_data
+        await asyncio.sleep(0)  # Allow other tasks to run
 
 async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: BackgroundTasks, chatbot):
     cancel_event.clear()
@@ -355,7 +335,7 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
         user_input = stt_result["text"]
         print(f"Processing user input: {user_input}")
         
-        # Collect the entire response first
+        # Collect the entire response
         response_text = ""
         async for chunk in chatbot.stream_workflow_response(user_input):
             if cancel_event.is_set():
@@ -368,28 +348,18 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
         sentences = sent_tokenize(response_text)
         print(f"Sentences to process: {sentences}")
         
-        # Process all sentences in parallel
-        audio_chunks = await process_sentences_parallel(sentences, cancel_event)
+        async def generate():
+            async for chunk in stream_audio_chunks(sentences, cancel_event):
+                yield chunk
         
-        if not audio_chunks:
-            return JSONResponse(content={"error": "No audio generated"}, status_code=500)
-        
-        # Combine all chunks
-        first_chunk = BytesIO(audio_chunks[0])
-        first_audio, sample_rate = sf.read(first_chunk)
-        
-        all_audio = [first_audio]
-        for chunk in audio_chunks[1:]:
-            chunk_buffer = BytesIO(chunk)
-            audio_data, _ = sf.read(chunk_buffer)
-            all_audio.append(audio_data)
-        
-        combined_audio = np.concatenate(all_audio)
-        combined_buffer = BytesIO()
-        sf.write(combined_buffer, combined_audio, sample_rate, format='WAV', subtype='PCM_16')
-        combined_buffer.seek(0)
-        
-        return StreamingResponse(combined_buffer, media_type="audio/wav")
+        return StreamingResponse(
+            generate(),
+            media_type="audio/wav",
+            headers={
+                "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": "inline"
+            }
+        )
         
     except Exception as e:
         print(f"Error in conversation stream: {e}")
