@@ -326,7 +326,7 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
                 output_wav_path = "output.wav"
                 subprocess.run(
                     [
-                        "python", "audio/kokoro_bridge.py",
+                        "python", "kokoro_bridge.py",
                         sentence,
                         output_wav_path
                     ],
