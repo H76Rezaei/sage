@@ -19,6 +19,13 @@ import soundfile as sf
 import numpy as np
 import sys
 import logging
+import asyncio
+from fastapi import FastAPI, UploadFile, BackgroundTasks
+import soundfile as sf
+import multiprocessing
+from asyncio import Queue
+
+#from audio.persistent_process import KokoroTTSWorker
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -268,6 +275,142 @@ async def conversation_audio_stream(audio: UploadFile, background_tasks: Backgro
         return JSONResponse(content={"error": f"Error in audio processing: {str(e)}"}, status_code=500)
     
 
+class KokoroTTSWorker:
+    def __init__(self):
+        self.process = None
+        self.ready = asyncio.Event()
+        self._start_task = None
+        self.kokoro_venv_path = os.getenv("KOKORO_VENV_PATH")
+        if not self.kokoro_venv_path:
+            raise ValueError("KOKORO_VENV_PATH environment variable not set")
+        
+        self.python_executable = os.path.join(self.kokoro_venv_path, "Scripts", "python.exe")
+        if not os.path.exists(self.python_executable):
+            raise ValueError(f"Python executable not found at {self.python_executable}")
+        
+        # Lock for synchronized access to process streams
+        self._stdin_lock = asyncio.Lock()
+        self._stdout_lock = asyncio.Lock()
+
+    async def ensure_worker_ready(self):
+        if self.process is None:
+            if self._start_task is None:
+                self._start_task = asyncio.create_task(self._start_worker())
+            await self._start_task
+            await self.ready.wait()
+
+    async def _start_worker(self):
+        try:
+            print("Starting TTS worker process...")
+            self.process = await asyncio.create_subprocess_exec(
+                self.python_executable,
+                'kokoro_bridge.py',
+                '--server',
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=os.path.dirname(os.path.abspath(__file__))
+            )
+            print("TTS worker process started")
+            
+            # Start the error logger
+            asyncio.create_task(self._log_stderr())
+            
+            # Send ping message
+            async with self._stdin_lock, self._stdout_lock:
+                message = json.dumps({"type": "ping"})
+                length_bytes = len(message).to_bytes(4, 'big')
+                self.process.stdin.write(length_bytes)
+                self.process.stdin.write(message.encode('utf-8'))
+                await self.process.stdin.drain()
+                
+                # Wait for pong
+                size_bytes = await self.process.stdout.read(4)
+                if size_bytes:
+                    self.ready.set()
+                    print("TTS worker ready")
+                else:
+                    raise RuntimeError("Worker failed to respond to ping")
+                
+        except Exception as e:
+            print(f"Failed to start TTS worker: {e}")
+            if self.process:
+                try:
+                    self.process.terminate()
+                    await self.process.wait()
+                except:
+                    pass
+            self.process = None
+            self.ready.clear()
+            raise
+
+    async def _log_stderr(self):
+        """Log stderr output from the worker process"""
+        while self.process and not self.process.stderr.at_eof():
+            try:
+                line = await self.process.stderr.readline()
+                if line:
+                    print(f"Worker stderr: {line.decode().strip()}")
+                else:
+                    break
+            except Exception as e:
+                print(f"Error reading stderr: {e}")
+                break
+
+    async def generate_audio(self, text):
+        """Thread-safe audio generation"""
+        try:
+            await self.ensure_worker_ready()
+            
+            if self.process is None or self.process.stdin is None:
+                raise RuntimeError("TTS worker is not running")
+            
+            # Use locks to ensure thread-safe access to stdin/stdout
+            async with self._stdin_lock, self._stdout_lock:
+                # Prepare and send the message
+                message = json.dumps({"type": "generate", "text": text})
+                length_bytes = len(message).to_bytes(4, 'big')
+                self.process.stdin.write(length_bytes)
+                self.process.stdin.write(message.encode('utf-8'))
+                await self.process.stdin.drain()
+                
+                # Read response
+                size_bytes = await self.process.stdout.read(4)
+                if not size_bytes:
+                    raise RuntimeError("Worker closed connection")
+                
+                size = int.from_bytes(size_bytes, 'big')
+                audio_data = await self.process.stdout.read(size)
+                
+                return audio_data
+                
+        except Exception as e:
+            print(f"Error generating audio: {e}")
+            # If there's an error, restart the worker
+            if self.process:
+                try:
+                    self.process.terminate()
+                    await self.process.wait()
+                except:
+                    pass
+            self.process = None
+            self.ready.clear()
+            raise
+
+    async def shutdown(self):
+        """Cleanly shut down the worker process"""
+        if self.process:
+            try:
+                self.process.terminate()
+                await self.process.wait()
+            except Exception as e:
+                print(f"Error shutting down worker: {e}")
+            finally:
+                self.process = None
+                self.ready.clear()
+
+# Create a single global instance
+tts_worker = KokoroTTSWorker()
 
 async def generate_audio_async(text):
     """Generate audio for a single chunk of text"""
@@ -314,15 +457,27 @@ async def generate_audio_async(text):
         return None
 
 async def stream_audio_chunks(sentences, cancel_event):
-    """Generate and stream audio chunks one by one"""
-    for sentence in sentences:
-        if cancel_event.is_set():
-            return
-        print("Current sentence to process:", sentence)    
-        audio_data = await generate_audio_async(sentence)
-        if audio_data:
-            yield audio_data
-        await asyncio.sleep(0)  # Allow other tasks to run
+    """Stream audio chunks sequentially to avoid concurrency issues"""
+    try:
+        # Ensure worker is ready before processing
+        await tts_worker.ensure_worker_ready()
+        
+        # Process sentences sequentially
+        for sentence in sentences:
+            if cancel_event.is_set():
+                return
+            try:
+                audio_data = await tts_worker.generate_audio(sentence)
+                if audio_data:
+                    yield audio_data
+            except Exception as e:
+                print(f"Error processing chunk: {e}")
+                # Continue with next sentence
+                continue
+                
+    except Exception as e:
+        print(f"Error in stream_audio_chunks: {e}")
+        raise
 
 async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: BackgroundTasks, chatbot):
     cancel_event.clear()
@@ -331,36 +486,28 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
         stt_result = voice_to_text(wav_audio)
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
-        
+            
         user_input = stt_result["text"]
         print(f"Processing user input: {user_input}")
         
-        # Collect the entire response
+        # Collect the entire response first
         response_text = ""
         async for chunk in chatbot.stream_workflow_response(user_input):
             if cancel_event.is_set():
                 return
             response_text += chunk
-        
+            
         response_text = preprocess_text(response_text)
-        print(f"Full response: {response_text}")
-        
         sentences = sent_tokenize(response_text)
-        print(f"Sentences to process: {sentences}")
-        
-        async def generate():
-            async for chunk in stream_audio_chunks(sentences, cancel_event):
-                yield chunk
         
         return StreamingResponse(
-            generate(),
+            stream_audio_chunks(sentences, cancel_event),
             media_type="audio/wav",
             headers={
                 "X-Content-Type-Options": "nosniff",
                 "Content-Disposition": "inline"
             }
         )
-        
     except Exception as e:
         print(f"Error in conversation stream: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)

@@ -7,7 +7,8 @@ from audio.audio_utils import (
     conversation_audio, 
     conversation_audio_stream, 
     cancel_stream,
-    conversation_audio_stream_kokoro
+    conversation_audio_stream_kokoro,
+    tts_worker
 )
 import subprocess
 from fastapi.responses import FileResponse
@@ -75,6 +76,11 @@ async def handle_conversation_audio(audio: UploadFile):
     3. Convert response to audio
     """
     return await conversation_audio(audio, chatbot)
+
+@app.on_event("startup")
+async def startup_event():
+    # Initialize the worker
+    await tts_worker.ensure_worker_ready()
 
 @app.post("/cancel")
 async def handle_cancel_stream():
