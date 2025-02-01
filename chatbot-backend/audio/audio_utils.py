@@ -358,44 +358,48 @@ class KokoroTTSWorker:
                 break
 
     async def generate_audio(self, text):
-        """Thread-safe audio generation"""
+        """Thread-safe audio generation with proper chunking"""
         try:
             await self.ensure_worker_ready()
             
             if self.process is None or self.process.stdin is None:
                 raise RuntimeError("TTS worker is not running")
             
-            # Use locks to ensure thread-safe access to stdin/stdout
             async with self._stdin_lock, self._stdout_lock:
-                # Prepare and send the message
+                # Send request
                 message = json.dumps({"type": "generate", "text": text})
                 length_bytes = len(message).to_bytes(4, 'big')
                 self.process.stdin.write(length_bytes)
                 self.process.stdin.write(message.encode('utf-8'))
                 await self.process.stdin.drain()
                 
-                # Read response
+                # Read full response size
                 size_bytes = await self.process.stdout.read(4)
                 if not size_bytes:
                     raise RuntimeError("Worker closed connection")
                 
-                size = int.from_bytes(size_bytes, 'big')
-                audio_data = await self.process.stdout.read(size)
+                total_size = int.from_bytes(size_bytes, 'big')
+                print(f"Expecting {total_size} bytes of audio data")
                 
-                return audio_data
+                # Read all data
+                audio_data = bytearray()
+                remaining = total_size
+                
+                while remaining > 0:
+                    chunk = await self.process.stdout.read(min(remaining, 32768))
+                    if not chunk:
+                        break
+                    audio_data.extend(chunk)
+                    remaining -= len(chunk)
+                
+                return bytes(audio_data)
                 
         except Exception as e:
             print(f"Error generating audio: {e}")
-            # If there's an error, restart the worker
-            if self.process:
-                try:
-                    self.process.terminate()
-                    await self.process.wait()
-                except:
-                    pass
             self.process = None
             self.ready.clear()
             raise
+
 
     async def shutdown(self):
         """Cleanly shut down the worker process"""
@@ -457,22 +461,42 @@ async def generate_audio_async(text):
         return None
 
 async def stream_audio_chunks(sentences, cancel_event):
-    """Stream audio chunks sequentially to avoid concurrency issues"""
+    """Stream audio chunks with proper WAV headers"""
     try:
-        # Ensure worker is ready before processing
         await tts_worker.ensure_worker_ready()
         
-        # Process sentences sequentially
-        for sentence in sentences:
+        print(f"Starting to process {len(sentences)} sentences")
+        
+        for i, sentence in enumerate(sentences):
             if cancel_event.is_set():
                 return
             try:
+                print(f"Processing sentence {i+1}/{len(sentences)}: {sentence}")
                 audio_data = await tts_worker.generate_audio(sentence)
+                
                 if audio_data:
-                    yield audio_data
+                    # Verify and convert audio format
+                    input_buffer = BytesIO(audio_data)
+                    try:
+                        # Read the original audio
+                        with sf.SoundFile(input_buffer) as sf_file:
+                            data = sf_file.read()
+                            samplerate = sf_file.samplerate
+                            
+                            # Write as new WAV file with guaranteed PCM_16 format
+                            output_buffer = BytesIO()
+                            sf.write(output_buffer, data, samplerate, format='WAV', subtype='PCM_16')
+                            output_data = output_buffer.getvalue()
+                            
+                            print(f"Processed audio chunk: {len(output_data)} bytes, {samplerate}Hz")
+                            yield output_data
+                            print(f"Chunk {i+1} sent to frontend")
+                    except Exception as e:
+                        print(f"Error processing audio format: {e}")
+                else:
+                    print(f"No audio data generated for sentence {i+1}")
             except Exception as e:
-                print(f"Error processing chunk: {e}")
-                # Continue with next sentence
+                print(f"Error processing chunk {i+1}: {e}")
                 continue
                 
     except Exception as e:

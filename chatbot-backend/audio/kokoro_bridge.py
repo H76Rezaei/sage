@@ -17,25 +17,21 @@ def run_server():
     model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
     print("Model loaded successfully", file=sys.stderr)
 
-    # Use binary mode for stdin/stdout
     stdin = os.fdopen(sys.stdin.fileno(), 'rb', buffering=0)
     stdout = os.fdopen(sys.stdout.fileno(), 'wb', buffering=0)
 
     while True:
         try:
-            # Read 4 bytes for message length
             length_bytes = stdin.read(4)
             if not length_bytes:
                 print("Input stream closed", file=sys.stderr)
                 break
 
             msg_length = int.from_bytes(length_bytes, 'big')
-            # Read the JSON message
             message = stdin.read(msg_length).decode('utf-8')
             request = json.loads(message)
 
             if request["type"] == "ping":
-                # Send empty response for ping
                 stdout.write((0).to_bytes(4, 'big'))
                 stdout.flush()
                 continue
@@ -51,19 +47,31 @@ def run_server():
                     lang="en-us"
                 )
 
-                # Convert to WAV
+                # Normalize and convert to int16
+                if samples.dtype != np.int16:
+                    samples = (samples * 32767).astype(np.int16)
+
+                # Generate WAV in memory
                 audio_buffer = BytesIO()
-                sf.write(audio_buffer, samples, sample_rate, format='WAV')
+                sf.write(audio_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
                 audio_data = audio_buffer.getvalue()
 
-                # Write response length followed by audio data
+                print(f"Generated audio size: {len(audio_data)} bytes", file=sys.stderr)
+
+                # Send full size first
                 stdout.write(len(audio_data).to_bytes(4, 'big'))
-                stdout.write(audio_data)
-                stdout.flush()
+                
+                # Send data in chunks to avoid buffer issues
+                chunk_size = 32768
+                for i in range(0, len(audio_data), chunk_size):
+                    chunk = audio_data[i:i + chunk_size]
+                    stdout.write(chunk)
+                    stdout.flush()
+                
+                print(f"Audio data sent successfully", file=sys.stderr)
 
         except Exception as e:
             print(f"Server error: {e}", file=sys.stderr)
-            # Send error response
             error_msg = json.dumps({"error": str(e)}).encode('utf-8')
             stdout.write(len(error_msg).to_bytes(4, 'big'))
             stdout.write(error_msg)
