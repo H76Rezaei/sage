@@ -40,6 +40,38 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         };
     }, [isVoiceRoute, isRecording]);
 
+
+    // Method to clear voice history
+  const clearVoiceHistory = () => {
+    // Clear localStorage
+    localStorage.removeItem('voiceChatHistory');
+    
+    // If setChatHistory prop is provided, clear it
+    if (setChatHistory) {
+      setChatHistory([]);
+    }
+  };
+
+  useEffect(() => {
+    // Clear localStorage when the app is about to close
+    const handleBeforeUnload = () => {
+      clearVoiceHistory();
+    };
+
+    // Clear history when component mounts 
+    clearVoiceHistory();
+  
+    // Add event listener when component mounts
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleBeforeUnload);
+  
+    // Clean up event listeners when component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleBeforeUnload);
+    };
+  }, []);
+
   const startRecording = async () => {
     if (!isVoiceRoute || isRecording) return;
     
