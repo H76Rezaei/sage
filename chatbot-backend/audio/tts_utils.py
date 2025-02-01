@@ -1,29 +1,23 @@
 from fastapi import UploadFile, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from io import BytesIO
 import ffmpeg
 from pydub import AudioSegment
-import json
 import asyncio
 from audio.stt_utils import voice_to_text
-from TTS.api import TTS
 from nltk.tokenize import sent_tokenize
 import torch
 import re
 import nltk
-from threading import Event
-import subprocess
 import os
 from dotenv import load_dotenv
 import soundfile as sf
 import numpy as np
-import sys
 import logging
 import asyncio
-from fastapi import FastAPI, UploadFile, BackgroundTasks
+from fastapi import UploadFile, BackgroundTasks
 import soundfile as sf
-import multiprocessing
-from asyncio import Queue
+
 
 from audio.persistent_process import KokoroTTSWorker
 
@@ -134,6 +128,8 @@ async def generate_audio_async(text):
         audio_dir = os.path.dirname(os.path.abspath(__file__))
         
         print(f"Generating audio for: {text}")
+        if cancel_event.is_set():
+                return
         process = await asyncio.create_subprocess_exec(
             python_executable,
             os.path.join(audio_dir, "kokoro_bridge.py"),
@@ -142,6 +138,9 @@ async def generate_audio_async(text):
             stderr=asyncio.subprocess.PIPE,
             cwd=audio_dir,
         )
+
+        if cancel_event.is_set():
+                return
         
         stdout, stderr = await process.communicate()
         
@@ -152,7 +151,9 @@ async def generate_audio_async(text):
         if not stdout:
             print("No audio data received")
             return None
-            
+        
+        if cancel_event.is_set():
+                return    
         # Convert to WAV format
         audio_buffer = BytesIO(stdout)
         samples, sample_rate = sf.read(audio_buffer)
@@ -163,6 +164,9 @@ async def generate_audio_async(text):
         output_buffer = BytesIO()
         sf.write(output_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
         output_buffer.seek(0)
+
+        if cancel_event.is_set():
+                return
         
         return output_buffer.getvalue()
         
@@ -172,18 +176,22 @@ async def generate_audio_async(text):
 
 async def stream_audio_chunks(sentences, cancel_event):
     """Stream audio chunks with proper WAV headers"""
+    if cancel_event.is_set():
+                return
     try:
         await tts_worker.ensure_worker_ready()
         
         print(f"Starting to process {len(sentences)} sentences")
-        
+        if cancel_event.is_set():
+                return
         for i, sentence in enumerate(sentences):
             if cancel_event.is_set():
                 return
             try:
                 print(f"Processing sentence {i+1}/{len(sentences)}: {sentence}")
                 audio_data = await tts_worker.generate_audio(sentence)
-                
+                if cancel_event.is_set():
+                    return
                 if audio_data:
                     # Verify and convert audio format
                     input_buffer = BytesIO(audio_data)
@@ -192,12 +200,16 @@ async def stream_audio_chunks(sentences, cancel_event):
                         with sf.SoundFile(input_buffer) as sf_file:
                             data = sf_file.read()
                             samplerate = sf_file.samplerate
+
+                            if cancel_event.is_set():
+                                return
                             
                             # Write as new WAV file with guaranteed PCM_16 format
                             output_buffer = BytesIO()
                             sf.write(output_buffer, data, samplerate, format='WAV', subtype='PCM_16')
                             output_data = output_buffer.getvalue()
-                            
+                            if cancel_event.is_set():
+                                return
                             print(f"Processed audio chunk: {len(output_data)} bytes, {samplerate}Hz")
                             yield output_data
                             print(f"Chunk {i+1} sent to frontend")
@@ -217,13 +229,19 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
     cancel_event.clear()
     try:
         wav_audio = await convert_to_wav(audio)
+        if cancel_event.is_set():
+                return
         stt_result = voice_to_text(wav_audio)
+        if cancel_event.is_set():
+                return
         if not stt_result["success"]:
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
             
         user_input = stt_result["text"]
         print(f"Processing user input: {user_input}")
-        
+
+        if cancel_event.is_set():
+                return
         # Collect the entire response first
         response_text = ""
         async for chunk in chatbot.stream_workflow_response(user_input):
@@ -231,8 +249,13 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
                 return
             response_text += chunk
             
+        if cancel_event.is_set():
+                return    
         response_text = preprocess_text(response_text)
         sentences = sent_tokenize(response_text)
+
+        if cancel_event.is_set():
+                return
         
         return StreamingResponse(
             stream_audio_chunks(sentences, cancel_event),

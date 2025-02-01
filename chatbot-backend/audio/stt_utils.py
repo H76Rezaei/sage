@@ -1,10 +1,5 @@
 import speech_recognition as sr
 from io import BytesIO
-from fastapi import UploadFile
-import os
-from playsound import playsound
-from TTS.api import TTS
-from nltk.tokenize import sent_tokenize
 import torch
 from pydub import AudioSegment
 import librosa
