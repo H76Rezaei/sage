@@ -3,11 +3,13 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from companion.digital_companion import DigitalCompanion
-from audio.audio_utils import (
-    conversation_audio, 
-    conversation_audio_stream, 
-    cancel_stream
+from audio.tts_utils import (
+    cancel_stream,
+    conversation_audio_stream_kokoro,
+    tts_worker
 )
+import subprocess
+from fastapi.responses import FileResponse
 
 # Initialize digital companion chatbot
 chatbot = DigitalCompanion()
@@ -61,17 +63,11 @@ async def conversation(request: Request):
         media_type="text/event-stream"
     )
 
-@app.post("/conversation-audio")
-async def handle_conversation_audio(audio: UploadFile):
-    """
-    Process audio input and return text-to-speech response.
-    
-    Workflow:
-    1. Convert audio to text
-    2. Generate chatbot response
-    3. Convert response to audio
-    """
-    return await conversation_audio(audio, chatbot)
+
+@app.on_event("startup")
+async def startup_event():
+    # Initialize the worker
+    await tts_worker.ensure_worker_ready()
 
 @app.post("/cancel")
 async def handle_cancel_stream():
@@ -90,7 +86,7 @@ async def handle_conversation_audio_stream(audio: UploadFile, background_tasks: 
     2. Generate streaming chatbot response
     3. Stream text-to-speech audio chunks
     """
-    return await conversation_audio_stream(audio, background_tasks, chatbot)
+    return await conversation_audio_stream_kokoro(audio, background_tasks, chatbot)
 
 if __name__ == "__main__":
     # Run FastAPI application using Uvicorn ASGI server

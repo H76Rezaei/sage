@@ -18,6 +18,10 @@ conversation_logs_sample = pd.read_csv("conversation_logs_sample.csv")
 # Merge the two DataFrames based on matching IDs
 merged_logs = pd.merge(generated_responses, conversation_logs_sample, left_on='log_id', right_on='id', how='left')
 
+# Drop unnecessary columns
+columns_to_drop = ['created_at', 'id_x', 'conv_id', 'turn_id', 'user_input']
+merged_logs = merged_logs.drop(columns=columns_to_drop, errors='ignore') 
+
 # Filter for specific version IDs
 selected_versions = [3, 5, 9, 11, 14]
 filtered_logs = merged_logs[merged_logs['version_id'].isin(selected_versions)].copy()

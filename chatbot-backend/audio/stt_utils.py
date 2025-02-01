@@ -1,7 +1,6 @@
 import speech_recognition as sr
 from io import BytesIO
 from fastapi import UploadFile
-from gtts import gTTS
 import os
 from playsound import playsound
 from TTS.api import TTS
@@ -13,15 +12,13 @@ import numpy as np
 import whisper
 
 
-
-tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
-
-#list available speakers
-print("Available speakers:", tts_model.speakers)
+device= ("cuda" if torch.cuda.is_available() 
+            else "mps" if torch.backends.mps.is_available() 
+            else "cpu")
 
 
 # Load the Whisper model (choose 'tiny', 'base', 'small', 'large')
-model = whisper.load_model("base")
+model = whisper.load_model("base").to(device)
 
 
 def downsample_audio(audio_data: BytesIO) -> BytesIO:
@@ -61,34 +58,3 @@ def voice_to_text(audio_data: BytesIO):
 
     except Exception as e:
         return {"success": False, "error": f"An error occurred: {str(e)}"}
-
-
-
-def new_tts(text, filename='response.wav', play_sound=False, model_name="tts_models/en/ljspeech/tacotron2-DDC"):
-    """
-    Convert text to speech using Coqui TTS and save as an audio file.
-    Optionally, play the sound after saving.
-    """
-    try:
-        # Load the TTS model
-        #tts = TTS(model_name)
-
-        # Synthesize speech from text and save it as a WAV file
-        tts_model.tts_to_file(text=text, file_path=filename)
-        print(f"Audio file saved as: {filename}")  # Log the file path
-
-        # Check if the file exists
-        if os.path.exists(filename):
-            print(f"Audio file {filename} exists.")
-        else:
-            raise FileNotFoundError(f"Audio file {filename} does not exist.")
-
-        # Optionally, play the sound if needed
-        if play_sound:
-            try:
-                from playsound import playsound
-                playsound(filename)
-            except Exception as e:
-                print(f"Error playing sound: {e}")
-    except Exception as e:
-        print(f"Error converting text to speech: {e}")
