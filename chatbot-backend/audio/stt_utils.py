@@ -20,6 +20,10 @@ device= ("cuda" if torch.cuda.is_available()
 # Load the Whisper model (choose 'tiny', 'base', 'small', 'large')
 model = whisper.load_model("base").to(device)
 
+model = torch.quantization.quantize_dynamic(
+    model, {torch.nn.Linear}, dtype=torch.qint8  # For dynamic quantization
+)
+
 
 def downsample_audio(audio_data: BytesIO) -> BytesIO:
     """
@@ -46,7 +50,7 @@ def voice_to_text(audio_data: BytesIO):
         print("Converting BytesIO to waveform...")
         y, sr = librosa.load(audio_data, sr=16000, mono=True)  # Force 16kHz and mono
 
-        # Use Whisper model to transcribe (no 'sr' argument required)
+        # Use Whisper model to transcribe
         print("Recognizing speech using Whisper...")
         result = model.transcribe(y, fp16=False)  # Use waveform directly (16kHz expected)
         text = result.get("text", "")
