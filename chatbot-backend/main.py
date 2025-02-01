@@ -3,9 +3,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from companion.digital_companion import DigitalCompanion
-from audio.audio_utils import (
-    conversation_audio, 
-    conversation_audio_stream, 
+from audio.tts_utils import (
     cancel_stream,
     conversation_audio_stream_kokoro,
     tts_worker
@@ -65,17 +63,6 @@ async def conversation(request: Request):
         media_type="text/event-stream"
     )
 
-@app.post("/conversation-audio")
-async def handle_conversation_audio(audio: UploadFile):
-    """
-    Process audio input and return text-to-speech response.
-    
-    Workflow:
-    1. Convert audio to text
-    2. Generate chatbot response
-    3. Convert response to audio
-    """
-    return await conversation_audio(audio, chatbot)
 
 @app.on_event("startup")
 async def startup_event():
