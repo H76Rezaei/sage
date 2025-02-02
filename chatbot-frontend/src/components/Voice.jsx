@@ -234,49 +234,41 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
   const handleDataAvailable = async (event) => {
     if (stopFlagRef.current || !userSpeakingRef.current) return;
-
-    if (isInterruptedRef.current) {
-      isInterruptedRef.current = false;
-      startRecording();
-      return;
-  }
-
+  
     if (event.data.size > 0) {
-        const audioBlob = new Blob([event.data], { type: "audio/webm" });
-
-        if (audioBlob.size > 1000) {
-            console.log("User audio recorded:", audioBlob);
-            setChatHistory((prev) => [
-                ...prev,
-                { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
-            ]);
-
-            try {
-                await sendAudioToConversationEndpoint(audioBlob); // Send to backend and play response
-                //startRecording(); // Restart recording after bot response
-            } catch (error) {
-                console.error("Error handling bot audio:", error);
-                cleanup();
-            }
+      const audioBlob = new Blob([event.data], { type: "audio/webm" });
+  
+      if (audioBlob.size > 1000) {
+        console.log("User audio recorded:", audioBlob);
+        setChatHistory((prev) => [
+          ...prev,
+          { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
+        ]);
+  
+        try {
+          await sendAudioToConversationEndpoint(audioBlob);
+        } catch (error) {
+          console.error("Error handling bot audio:", error);
+          cleanup();
         }
+      }
     }
-};
+  };
 
-const handleInterrupt = async () => {
+  const handleInterrupt = async () => {
     try {
       const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
       if (response.ok) {
         console.log("Cancellation confirmed by backend.");
-
         isInterruptedRef_beta.current = true;
-
+  
         if (botAudioRef.current) {
           botAudioRef.current.pause();
           botAudioRef.current.currentTime = 0;
           botAudioRef.current = null;
         }
-        setStatusText('Stopped'); // Update status to "Stopped" immediately
-        isInterruptedRef.current = true;
+        setStatusText('Stopped');
+        isInterruptedRef.current = true; // Consider if this flag is still necessary
       } else {
         console.error("Backend failed to confirm cancellation.");
       }
