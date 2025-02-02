@@ -130,7 +130,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               // Check if not paused
               botAudioRef.current.pause();
               botAudioRef.current.currentTime = 0;
-              setStatusText('Listening..'); // Display Stopped
+              setStatusText('Stopped.'); // Display Stopped
               setInterruptMessage('');
               handleInterrupt()
             }
@@ -151,7 +151,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
                   stopRecordingAndProcess();
                   silenceDetectionStartedRef.current = false;
                 }
-              }, 2000);
+              }, 2000); //might go back to change this
             }
           }
 
@@ -314,6 +314,7 @@ const handleInterrupt = async () => {
                 botAudioRef.current = null;
                 return;
             }
+
             isPlaying = true;
             const audioBlob = playbackQueue.shift();
             const audioUrl = URL.createObjectURL(audioBlob);
@@ -338,7 +339,13 @@ const handleInterrupt = async () => {
             if (done) {
               console.log("Finished receiving bot audio");
               if (!isPlaying && !isInterruptedRef_beta.current) playNextChunk();
-              setStatusText('Listening...'); // Switch back to "Listening"
+              setStatusText('Stopped...'); // Switch back to "Listening"
+              startRecording();
+              break;
+            }
+
+            if(isInterruptedRef_beta.current){
+              setStatusText('Stopped...'); // Switch back to "Listening"
               startRecording();
               break;
             }
