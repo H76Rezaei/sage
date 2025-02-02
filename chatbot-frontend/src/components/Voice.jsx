@@ -20,6 +20,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
   const silenceTimeoutRef = useRef(null); // Reference to manage silence timeout
 
   const isInterruptedRef = useRef(false);
+  const isInterruptedRef_beta = useRef(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -267,6 +268,8 @@ const handleInterrupt = async () => {
       if (response.ok) {
         console.log("Cancellation confirmed by backend.");
 
+        isInterruptedRef_beta.current = true;
+
         if (botAudioRef.current) {
           botAudioRef.current.pause();
           botAudioRef.current.currentTime = 0;
@@ -334,6 +337,7 @@ const handleInterrupt = async () => {
             const { done, value } = await reader.read();
             if (done) {
               console.log("Finished receiving bot audio");
+              if (!isPlaying && !isInterruptedRef_beta.current) playNextChunk();
               setStatusText('Listening...'); // Switch back to "Listening"
               startRecording();
               break;
@@ -389,6 +393,9 @@ const handleInterrupt = async () => {
         ]);
         setStatusText('Listening...');
         startRecording();
+    }
+    finally{
+      isInterruptedRef_beta.current = false;
     }
 }
 
