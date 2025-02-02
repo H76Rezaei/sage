@@ -34,6 +34,15 @@ from fastapi.security import OAuth2PasswordBearer
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+def get_current_user_id(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return user_id
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
 @app.post("/register")
 def register(first_name: str, last_name: str, email: str, password: str):
@@ -44,12 +53,14 @@ def login(email: str, password: str):
     return login_user(email, password)
 
 @app.get("/profile")
-def profile(current_user_email: str):
-    return get_profile(current_user_email)
+def profile(current_user_id: int = Depends(get_current_user_id)):
+    return get_profile(current_user_id)
 
 @app.put("/profile")
-def update_profile_endpoint(current_user_email: str, first_name: str = None, last_name: str = None, phone_number: str = None, birth_date: str = None):
-    return update_profile(current_user_email, first_name, last_name, phone_number, birth_date)
+def update_profile_endpoint(current_user_id: int = Depends(get_current_user_id),
+                            first_name: str = None, last_name: str = None,
+                            phone_number: str = None, birth_date: str = None):
+    return update_profile(current_user_id, first_name, last_name, phone_number, birth_date)
 
 #----------------------------------------------------------------------------------------------------
 

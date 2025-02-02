@@ -50,8 +50,9 @@ def register_user(first_name: str, last_name: str, email: str, password: str):
             'password': hashed_password
         }).execute()
 
-        if user.status_code == 201:
-            return {"message": "User registered successfully"}
+        if user_response.status_code == 201:
+            new_user = user_response.data[0]
+            return {"message": "User registered successfully", "user": new_user}
         else:
             raise HTTPException(status_code=400, detail="Failed to register user")
     except Exception as e:
@@ -72,8 +73,7 @@ def login_user(email: str, password: str):
             raise HTTPException(status_code=400, detail="Invalid password")
 
 
-        access_token = create_access_token(data={"sub": user_data['email']})
+        access_token = create_access_token(data={"sub": user_data['email'], "user_id": user_data['id']})
         return {"access_token": access_token, "token_type": "bearer"}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
