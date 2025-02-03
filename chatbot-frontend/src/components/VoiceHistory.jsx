@@ -7,12 +7,6 @@ const VoiceHistory = ({ onSelectOption, chatHistory }) => {
     <div className="voice-history-container">
       {/* Header Section */}
       <div className="voice-history-header">
-        <button
-          className="back-button"
-          onClick={() => onSelectOption("voiceChat")}
-        >
-          <ArrowLeft />
-        </button>
         <h1>Voice Chat</h1>
       </div>
 
