@@ -121,7 +121,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       audioContextRef.current = audioContext;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const volumeThreshold = 70; // Threshold for detecting speech.
+      const volumeThreshold = 20; // Threshold for detecting speech.
+      
 
       // Recursive function to detect silence.
       const detectSilence = () => {
@@ -129,6 +130,8 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
         analyser.getByteFrequencyData(dataArray);
         const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+       
 
         if (avgVolume > volumeThreshold) {
           // User is speaking.
@@ -156,7 +159,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               console.log("Silence detected, stopping recording...");
               stopRecordingAndProcess();
               silenceDetectionStartedRef.current = false;
-            }, 2000);
+            }, 1000);
           }
         }
         requestAnimationFrame(detectSilence); // Continue detecting silence.
