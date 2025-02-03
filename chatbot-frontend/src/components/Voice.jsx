@@ -6,63 +6,69 @@ import "./Voice.css";
 import { sendAudioToBackend } from "../services/speechApi";
 import { useNavigate, useLocation } from "react-router-dom";
 
+// Main VoiceChat component for handling voice-based interactions.
 const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
+  // State to track if recording is active.
   const [isRecording, setIsRecording] = useState(false);
-  const [statusText, setStatusText] = useState(""); // For text status
-  const [interruptMessage, setInterruptMessage] = useState(""); // For interrupt message
+  // State to display status text (e.g., "Listening...", "Processing...").
+  const [statusText, setStatusText] = useState("");
+  // State to display interrupt messages (e.g., when bot audio is interrupted).
+  const [interruptMessage, setInterruptMessage] = useState("");
 
-  // Consolidated cancellation token. Incrementing cancels any in-flight requests.
+  // Ref to track the current request ID for cancellation purposes.
   const currentRequestId = useRef(0);
 
-  // Refs for media and audio processing.
-  const mediaRecorderRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const botAudioRef = useRef(null);
-  const silenceTimeoutRef = useRef(null);
+  // Refs for managing media and audio processing.
+  const mediaRecorderRef = useRef(null); // MediaRecorder instance.
+  const audioContextRef = useRef(null); // AudioContext for silence detection.
+  const botAudioRef = useRef(null); // Reference to the bot's audio element.
+  const silenceTimeoutRef = useRef(null); // Timeout for silence detection.
 
   // Refs for controlling silence detection and recording loops.
-  const userSpeakingRef = useRef(false);
-  const silenceDetectionStartedRef = useRef(false);
-  const isRecordingRef = useRef(false); // Tracks whether we should keep running detectSilence
-  const isProcessingRef = useRef(false); // Guard to avoid multiple stop calls
+  const userSpeakingRef = useRef(false); // Tracks if the user is speaking.
+  const silenceDetectionStartedRef = useRef(false); // Tracks if silence detection is active.
+  const isRecordingRef = useRef(false); // Tracks if recording is ongoing.
+  const isProcessingRef = useRef(false); // Guards against multiple stop calls.
 
+  // React Router hooks for navigation and location.
   const navigate = useNavigate();
   const location = useLocation();
-  const isVoiceRoute = location.pathname === "/voice";
+  const isVoiceRoute = location.pathname === "/voice"; // Checks if the current route is "/voice".
 
-  // Helper to resume recording by cleaning up any existing session first.
+  // Helper function to resume recording after cleanup.
   const resumeRecording = () => {
     if (isVoiceRoute) {
       console.log("Resuming recording.");
-      cleanup(); // Make sure the previous session is completely cleaned up.
+      cleanup(); // Clean up any existing session.
       setStatusText("Listening...");
-      startRecording();
+      startRecording(); // Start a new recording session.
     }
   };
 
-  // Start or stop recording based on the route.
+  // Effect to start or stop recording based on the route.
   useEffect(() => {
     if (isVoiceRoute && !isRecording) {
-      startRecording();
+      startRecording(); // Start recording if on the voice route.
     } else if (!isVoiceRoute && isRecording) {
-      cleanup();
+      cleanup(); // Clean up if leaving the voice route.
     }
     return () => {
       if (isRecording) {
-        cleanup();
+        cleanup(); // Clean up on component unmount.
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVoiceRoute]);
 
-  // Clear voice history on unload.
+  // Function to clear voice chat history from localStorage.
   const clearVoiceHistory = () => {
     localStorage.removeItem("voiceChatHistory");
     if (setChatHistory) {
-      setChatHistory([]);
+      setChatHistory([]); // Reset chat history in state.
     }
   };
 
+  // Effect to clear voice history on page unload.
   useEffect(() => {
     const handleBeforeUnload = () => {
       clearVoiceHistory();
@@ -76,15 +82,16 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     };
   }, []);
 
-  // Start recording audio.
+  // Function to start recording audio.
   const startRecording = async () => {
-    // Note: We now expect isRecording to be false because resumeRecording calls cleanup first.
+    // Exit if not on the voice route or already recording.
     if (!isVoiceRoute || isRecording) return;
 
     try {
+      // Request access to the user's microphone.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Clean up previous media if any.
+      // Clean up previous media resources if any.
       if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
         mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
@@ -92,8 +99,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         audioContextRef.current.close();
       }
 
+      // Create a new MediaRecorder instance.
       const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = handleDataAvailable;
+      mediaRecorder.ondataavailable = handleDataAvailable; // Set handler for data availability.
       mediaRecorderRef.current = mediaRecorder;
 
       // Start recording.
@@ -102,9 +110,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       console.log("Recording started.");
       setIsRecording(true);
       isRecordingRef.current = true;
-      isProcessingRef.current = false; // Reset processing flag on new recording
+      isProcessingRef.current = false; // Reset processing flag.
 
-      // Set up an audio context and analyser for silence detection.
+      // Set up audio context and analyser for silence detection.
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
@@ -113,12 +121,11 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       audioContextRef.current = audioContext;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const volumeThreshold = 70; // Adjust threshold as needed
+      const volumeThreshold = 70; // Threshold for detecting speech.
 
-      // Recursive function for silence detection.
+      // Recursive function to detect silence.
       const detectSilence = () => {
-        // If recording has been cancelled, stop further processing.
-        if (!isRecordingRef.current) return;
+        if (!isRecordingRef.current) return; // Exit if recording is stopped.
 
         analyser.getByteFrequencyData(dataArray);
         const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
@@ -128,13 +135,13 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
           userSpeakingRef.current = true;
           silenceDetectionStartedRef.current = true;
 
-          // If bot audio is playing, interrupt it.
+          // Interrupt bot audio if playing.
           if (botAudioRef.current && !botAudioRef.current.paused) {
             console.log("User speaking, interrupting bot audio.");
             botAudioRef.current.pause();
             botAudioRef.current.currentTime = 0;
             setStatusText("Stopped.");
-            handleInterrupt(); // Cancel any ongoing processing.
+            handleInterrupt(); // Cancel ongoing processing.
           }
 
           // Clear any scheduled silence timeout.
@@ -143,7 +150,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
             silenceTimeoutRef.current = null;
           }
         } else if (silenceDetectionStartedRef.current) {
-          // When silence is detected, schedule stopping the recording.
+          // Schedule stopping the recording after silence.
           if (!silenceTimeoutRef.current && !isProcessingRef.current) {
             silenceTimeoutRef.current = setTimeout(() => {
               console.log("Silence detected, stopping recording...");
@@ -152,10 +159,10 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
             }, 2000);
           }
         }
-        requestAnimationFrame(detectSilence);
+        requestAnimationFrame(detectSilence); // Continue detecting silence.
       };
 
-      detectSilence();
+      detectSilence(); // Start silence detection.
     } catch (err) {
       console.error("Error accessing audio devices:", err);
       cleanup();
@@ -171,32 +178,30 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     }
   };
 
-  // Stop recording and begin processing.
+  // Function to stop recording and begin processing.
   const stopRecordingAndProcess = () => {
-    // Guard against multiple calls.
-    if (isProcessingRef.current) return;
+    if (isProcessingRef.current) return; // Guard against multiple calls.
     isProcessingRef.current = true;
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stop(); // Stop the MediaRecorder.
     }
     setStatusText("Processing...");
   };
 
   // Handler for the stop button.
   const handleStopButton = () => {
-    cleanup();
-    navigate("/voice-history");
+    cleanup(); // Clean up resources.
+    navigate("/voice-history"); // Navigate to the voice history page.
   };
 
-  // Cleanup all resources and cancel ongoing requests.
+  // Function to clean up all resources and cancel ongoing requests.
   const cleanup = () => {
-    // Increase the cancellation token.
-    currentRequestId.current++;
+    currentRequestId.current++; // Increment cancellation token.
     console.log("Cleanup invoked; cancellation token increased.");
 
-    // Stop the recording loop.
-    isRecordingRef.current = false;
+    isRecordingRef.current = false; // Stop the recording loop.
 
+    // Stop and release MediaRecorder resources.
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       if (mediaRecorderRef.current.stream) {
@@ -232,10 +237,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     setInterruptMessage("");
   };
 
-  // Called when a data chunk is available.
+  // Handler for when audio data is available.
   const handleDataAvailable = async (event) => {
-    // If no user speech has been detected, ignore this data.
-    if (!userSpeakingRef.current) return;
+    if (!userSpeakingRef.current) return; // Ignore if no user speech detected.
 
     if (event.data.size > 0) {
       const audioBlob = new Blob([event.data], { type: "audio/webm" });
@@ -249,7 +253,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         ]);
 
         try {
-          await sendAudioToConversationEndpoint(audioBlob);
+          await sendAudioToConversationEndpoint(audioBlob); // Send audio to backend.
         } catch (error) {
           console.error("Error handling bot audio:", error);
           cleanup();
@@ -259,22 +263,21 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     }
   };
 
-  // Interrupt processing by bumping the cancellation token.
+  // Function to interrupt processing by bumping the cancellation token.
   const handleInterrupt = async () => {
     console.log("Interrupt requested.");
-    // Bump the cancellation token.
-    currentRequestId.current++;
-  
+    currentRequestId.current++; // Bump the cancellation token.
+
     // Stop any playing bot audio.
     if (botAudioRef.current) {
       botAudioRef.current.pause();
       botAudioRef.current.currentTime = 0;
       botAudioRef.current = null;
     }
-  
+
     setStatusText("Stopped");
-  
-    // Optionally notify the server of the cancellation.
+
+    // Notify the server of the cancellation.
     try {
       const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
       if (response.ok) {
@@ -283,147 +286,140 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     } catch (error) {
       console.error("Cancellation error:", error);
     }
-  
-    // Clear any lingering resources.
-    cleanup();
-  
-    // Immediately resume recording after an interruption.
-    resumeRecording();
+
+    cleanup(); // Clean up resources.
+    resumeRecording(); // Resume recording after interruption.
   };
-  
 
-  // Send audio to the backend and process the streamed response.
-  // Send audio to the backend and process the streamed response.
-async function sendAudioToConversationEndpoint(audioBlob) {
-  const requestId = ++currentRequestId.current;
-  console.log("New audio request started with token:", requestId);
+  // Function to send audio to the backend and process the streamed response.
+  async function sendAudioToConversationEndpoint(audioBlob) {
+    const requestId = ++currentRequestId.current;
+    console.log("New audio request started with token:", requestId);
 
-  // Reset any bot audio playback.
-  if (botAudioRef.current) {
-    botAudioRef.current.pause();
-    botAudioRef.current = null;
-  }
-
-  // Queue for sequential playback.
-  const playbackQueue = [];
-  let isPlaying = false;
-  let streamEnded = false; // Flag to indicate if the stream reading is done.
-
-  const playNextChunk = () => {
-    // If no more chunks and stream has ended, resume recording.
-    if (playbackQueue.length === 0) {
-      isPlaying = false;
-      if (streamEnded && requestId === currentRequestId.current) {
-        console.log("All chunks played; resuming recording.");
-        resumeRecording();
-      }
-      return;
+    // Reset any bot audio playback.
+    if (botAudioRef.current) {
+      botAudioRef.current.pause();
+      botAudioRef.current = null;
     }
-    isPlaying = true;
-    const chunkBlob = playbackQueue.shift();
-    const audioUrl = URL.createObjectURL(chunkBlob);
-    const audio = new Audio(audioUrl);
-    botAudioRef.current = audio;
 
-    audio.play().catch((error) => {
-      console.error("Error playing audio chunk:", error);
-      URL.revokeObjectURL(audioUrl);
-      isPlaying = false;
-      // Even if there's an error, we try to play the next chunk.
-      playNextChunk();
-    });
+    // Queue for sequential playback of audio chunks.
+    const playbackQueue = [];
+    let isPlaying = false;
+    let streamEnded = false; // Flag to indicate if the stream reading is done.
 
-    audio.onended = () => {
-      URL.revokeObjectURL(audioUrl);
-      isPlaying = false;
-      playNextChunk();
-    };
-  };
-
-  try {
-    const response = await sendAudioToBackend(audioBlob);
-    if (!response.body) return;
-
-    const reader = response.body.getReader();
-    let accumulatedData = new Uint8Array();
-
-    while (true) {
-      // Exit early if cancelled.
-      if (requestId !== currentRequestId.current) {
-        console.log("Audio processing cancelled.");
-        await reader.cancel();
-        break;
+    // Function to play the next audio chunk in the queue.
+    const playNextChunk = () => {
+      if (playbackQueue.length === 0) {
+        isPlaying = false;
+        if (streamEnded && requestId === currentRequestId.current) {
+          console.log("All chunks played; resuming recording.");
+          resumeRecording(); // Resume recording after all chunks are played.
+        }
+        return;
       }
-      const { done, value } = await reader.read();
-      if (done) break;
+      isPlaying = true;
+      const chunkBlob = playbackQueue.shift();
+      const audioUrl = URL.createObjectURL(chunkBlob);
+      const audio = new Audio(audioUrl);
+      botAudioRef.current = audio;
 
-      if (value && value.byteLength > 0) {
-        // Accumulate new data.
-        const combinedData = new Uint8Array(accumulatedData.length + value.length);
-        combinedData.set(accumulatedData, 0);
-        combinedData.set(value, accumulatedData.length);
-        accumulatedData = combinedData;
+      audio.play().catch((error) => {
+        console.error("Error playing audio chunk:", error);
+        URL.revokeObjectURL(audioUrl);
+        isPlaying = false;
+        playNextChunk(); // Try playing the next chunk even if there's an error.
+      });
 
-        // Look for a WAV header (RIFF).
-        let startIndex = 0;
-        while (startIndex < accumulatedData.length) {
-          const isWavHeader =
-            accumulatedData[startIndex] === 82 &&
-            accumulatedData[startIndex + 1] === 73 &&
-            accumulatedData[startIndex + 2] === 70 &&
-            accumulatedData[startIndex + 3] === 70;
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        isPlaying = false;
+        playNextChunk(); // Play the next chunk after the current one ends.
+      };
+    };
 
-          if (isWavHeader) {
-            let dataLength = accumulatedData.length - startIndex;
-            if (dataLength >= 8) {
-              const riffChunkSize =
-                new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
-              if (dataLength >= riffChunkSize) {
-                const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
-                const chunkBlob = new Blob([wavData], { type: "audio/wav" });
+    try {
+      const response = await sendAudioToBackend(audioBlob); // Send audio to the backend.
+      if (!response.body) return;
 
-                // Process only if still current.
-                if (requestId === currentRequestId.current) {
-                  playbackQueue.push(chunkBlob);
-                  const botAudioUrl = URL.createObjectURL(chunkBlob);
-                  setChatHistory((prev) => [
-                    ...prev,
-                    { type: "audio", sender: "bot", content: botAudioUrl },
-                  ]);
-                  // Start playback if not already playing.
-                  if (!isPlaying) {
-                    playNextChunk();
-                  }
-                }
-                startIndex += riffChunkSize;
-                continue;
-              }
-            }
-          }
+      const reader = response.body.getReader();
+      let accumulatedData = new Uint8Array();
+
+      // Process the streamed response.
+      while (true) {
+        if (requestId !== currentRequestId.current) {
+          console.log("Audio processing cancelled.");
+          await reader.cancel();
           break;
         }
-        accumulatedData = accumulatedData.subarray(startIndex);
-      }
-    }
+        const { done, value } = await reader.read();
+        if (done) break;
 
-    // Mark that the stream has ended.
-    streamEnded = true;
-    // If nothing is playing and the queue is empty, resume recording immediately.
-    if (!isPlaying && playbackQueue.length === 0 && requestId === currentRequestId.current) {
-      console.log("Stream ended and no pending chunks; resuming recording.");
+        if (value && value.byteLength > 0) {
+          // Accumulate new data.
+          const combinedData = new Uint8Array(accumulatedData.length + value.length);
+          combinedData.set(accumulatedData, 0);
+          combinedData.set(value, accumulatedData.length);
+          accumulatedData = combinedData;
+
+          // Look for a WAV header (RIFF).
+          let startIndex = 0;
+          while (startIndex < accumulatedData.length) {
+            const isWavHeader =
+              accumulatedData[startIndex] === 82 &&
+              accumulatedData[startIndex + 1] === 73 &&
+              accumulatedData[startIndex + 2] === 70 &&
+              accumulatedData[startIndex + 3] === 70;
+
+            if (isWavHeader) {
+              let dataLength = accumulatedData.length - startIndex;
+              if (dataLength >= 8) {
+                const riffChunkSize =
+                  new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
+                if (dataLength >= riffChunkSize) {
+                  const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
+                  const chunkBlob = new Blob([wavData], { type: "audio/wav" });
+
+                  // Process only if still current.
+                  if (requestId === currentRequestId.current) {
+                    playbackQueue.push(chunkBlob);
+                    const botAudioUrl = URL.createObjectURL(chunkBlob);
+                    setChatHistory((prev) => [
+                      ...prev,
+                      { type: "audio", sender: "bot", content: botAudioUrl },
+                    ]);
+                    if (!isPlaying) {
+                      playNextChunk(); // Start playback if not already playing.
+                    }
+                  }
+                  startIndex += riffChunkSize;
+                  continue;
+                }
+              }
+            }
+            break;
+          }
+          accumulatedData = accumulatedData.subarray(startIndex);
+        }
+      }
+
+      // Mark that the stream has ended.
+      streamEnded = true;
+      // If nothing is playing and the queue is empty, resume recording immediately.
+      if (!isPlaying && playbackQueue.length === 0 && requestId === currentRequestId.current) {
+        console.log("Stream ended and no pending chunks; resuming recording.");
+        resumeRecording();
+      }
+    } catch (error) {
+      console.error("Stream error:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "text", sender: "bot", content: "Error processing response" },
+      ]);
       resumeRecording();
     }
-  } catch (error) {
-    console.error("Stream error:", error);
-    setChatHistory((prev) => [
-      ...prev,
-      { type: "text", sender: "bot", content: "Error processing response" },
-    ]);
-    resumeRecording();
   }
-}
 
-
+  // Lottie animation options.
   const defaultOptions = {
     loop: true,
     autoplay: true,
