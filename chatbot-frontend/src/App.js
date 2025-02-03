@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import "./App.css";
 
-import Home from "./components/Home";
+// import Home from "./components/Home";
 import Chat from "./components/Chat";
 import Voice from "./components/Voice";
 import Sidebar from "./components/Sidebar";
@@ -73,9 +73,8 @@ function App() {
 
         <div className="content">
           <Routes>
-            <Route path="/" element={<Home />} />
             <Route
-              path="/chat"
+              path="/"
               element={
                 <Chat
                   sendConversation={sendConversation}
@@ -85,6 +84,17 @@ function App() {
                 />
               }
             />
+            {/* <Route
+              path="/chat"
+              element={
+                <Chat
+                  sendConversation={sendConversation}
+                  saveToHistory={saveToHistory}
+                  fontSize={fontSize}
+                  fontFamily={fontFamily}
+                />
+              }
+            /> */}
             <Route
               path="/voice"
               element={

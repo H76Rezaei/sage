@@ -26,11 +26,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               🏠 Home
             </Link>
           </li>
-          <li>
+          {/* <li>
             <Link to="/chat" className="link" onClick={toggleSidebar}>
               💬 Chat with Me
             </Link>
-          </li>
+          </li> */}
           <li>
             <Link to="/voice" className="link" onClick={toggleSidebar}>
               🗣️ Talk to Me
