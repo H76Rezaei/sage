@@ -12,6 +12,7 @@
 /build
 
 venv/
+chatbot-backend/kokoro_env/
 
 # misc
 .DS_Store
@@ -23,3 +24,4 @@ venv/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
