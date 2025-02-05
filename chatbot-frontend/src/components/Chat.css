@@ -1,4 +1,3 @@
-/* بخش اصلی چت */
 .chat-chat-container {
   height: 95vh;
   max-width: 900px;
@@ -10,7 +9,6 @@
   background-color: #ffffff;
 }
 
-/* صفحه خوش‌آمدگویی */
 .chat-welcome-screen {
   flex: 1;
   display: flex;
@@ -21,27 +19,22 @@
   background-color: #ffffff;
 }
 
-/* وقتی چت شروع شده */
 .chat-chat-screen {
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative; /* برای قرار دادن عناصر absolute */
+  position: relative;
 }
 
-/* 
-  کانتینر بالا سمت راست که شامل لوگوی کوچک و دکمه Clear Chat است
-*/
 .chat-top-right {
   position: absolute;
   top: 10px;
   right: 10px;
   display: flex;
   align-items: center;
-  gap: 1rem; /* فاصله بین لوگو و دکمه */
+  gap: 1rem;
 }
 
-/* --- حالت‌های مختلف لوگو --- */
 .chat-logo-container {
   position: relative;
   display: flex;
@@ -49,21 +42,18 @@
   justify-content: center;
 }
 
-/* لوگوی واقعی */
 .chat-logo {
   border-radius: 100%;
   z-index: 1;
   object-fit: cover;
 }
 
-/* انیمیشن لوتی پشت لوگو */
 .chat-logo-animation {
   position: absolute;
   pointer-events: none;
   z-index: 0;
 }
 
-/* حالت بزرگ (Welcome) */
 .chat-logo-container.large {
   width: 180px;
   height: 180px;
@@ -82,7 +72,6 @@
   left: 1;
 }
 
-/* حالت کوچک (بالا-راست در چت) */
 .chat-logo-container.small {
   width: 60px;
   height: 60px;
@@ -104,9 +93,8 @@
   left: 1;
 }
 
-/* دکمه Clear Chat */
 .chat-clear-button {
-  background-color: #8b1212; /* قرمز ملایم */
+  background-color: #8b1212;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -114,7 +102,7 @@
   cursor: pointer;
   font-size: 1.5rem;
   transition: background-color 0.2s ease;
-  /* position: absolute; */
+
   margin-top: 1.2rem;
   margin-right: 2rem;
 }
@@ -169,13 +157,11 @@
   border-radius: 30px;
 }
 
-/* ورودی بالای صفحه (welcome) */
 .chat-input-container.top {
   width: 95%;
   margin-top: 6rem;
 }
 
-/* ورودی پایین صفحه (active chat) */
 .chat-input-container.bottom {
   width: 95%;
   margin-top: auto;
@@ -183,7 +169,6 @@
   border-radius: 32px;
 }
 
-/* textarea */
 .chat-chat-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -199,7 +184,6 @@
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* کانتینر دکمه‌های ارسال و میکروفن */
 .chat-button-container {
   position: absolute;
   bottom: 10px;
@@ -208,7 +192,6 @@
   gap: 0.5rem;
 }
 
-/* دکمه‌های آیکنی */
 .chat-icon-button {
   width: 40px;
   height: 40px;
@@ -237,7 +220,6 @@
   height: 20px;
 }
 
-/* انیمیشن اسلاید ورود ورودی */
 @keyframes slideIn {
   from {
     transform: translateY(-50%);
@@ -249,7 +231,6 @@
   }
 }
 
-/* ریسپانسیو برای نمایشگرهای کوچک */
 @media (max-width: 768px) {
   .chat-chat-container {
     max-width: 100%;

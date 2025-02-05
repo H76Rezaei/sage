@@ -16,17 +16,13 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
 
   const navigate = useNavigate();
 
-  // تابع ارسال پیام
   const handleSend = async () => {
-    // اگر پیام خالی است یا در حال تایپ هستیم، جلوی ارسال را بگیر
     if (!message.trim() || isTyping) return;
 
-    // اگر چت شروع نشده باشد، حالا شروع می‌شود
     if (!chatStarted) {
       setChatStarted(true);
     }
 
-    // پیام کاربر را به تاریخچه اضافه کن
     const userMessage = {
       text: message,
       sender: "user",
@@ -35,7 +31,6 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
     setChatHistory((prev) => [...prev, userMessage]);
     saveToHistory(userMessage);
 
-    // استریم پاسخ را آغاز کن
     const currentMessage = message;
     setMessage("");
     setIsTyping(true);
@@ -43,14 +38,13 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
 
     try {
       await sendConversation(currentMessage, (streamData) => {
-        // تکه‌های استریم را جمع می‌کنیم
         if (streamData.response) {
           streamedResponseRef.current += streamData.response;
         }
 
         setChatHistory((prevHistory) => {
           const newHistory = [...prevHistory];
-          // پیام بات را پیدا کرده یا ایجاد می‌کنیم
+
           const lastBotMessageIndex = newHistory.findIndex(
             (msg) =>
               msg.sender === "bot" && msg.conversationId === userMessage.id
@@ -72,7 +66,6 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
           return newHistory;
         });
 
-        // اگر پاسخ نهایی است، می‌توانیم دوباره اجازه‌ی تایپ دهیم
         if (streamData.is_final) {
           saveToHistory({
             text: streamedResponseRef.current,
@@ -94,12 +87,10 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
     }
   };
 
-  // هدایت به صفحه Voice
   const handleVoiceClick = () => {
     navigate("/voice");
   };
 
-  // تابع پاک‌کردن کل چت و بازگشت به خوش‌آمدگویی
   const handleClearChat = () => {
     setChatHistory([]);
     setChatStarted(false);
@@ -108,7 +99,6 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
 
   return (
     <div className="chat-chat-container">
-      {/* اگر هنوز چت شروع نشده یا چت خالی است */}
       {!chatStarted && chatHistory.length === 0 ? (
         <div className="chat-welcome-screen">
           <div className="chat-logo-container large">
@@ -150,9 +140,7 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
           </div>
         </div>
       ) : (
-        // --- حالت پس از شروع چت ---
         <div className="chat-chat-screen">
-          {/* کانتینر بالا سمت راست: لوگوی کوچک + دکمه Clear Chat */}
           <div className="chat-top-right">
             <div className="chat-logo-container small">
               <img src="/image/logo.png" alt="App Logo" className="chat-logo" />
@@ -196,10 +184,6 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
                   handleSend();
                 }
               }}
-              /* 
-               در حالی که پاسخ استریم می‌شود، 
-               اجازه‌ی تایپ نداریم
-              */
               disabled={isTyping}
               style={{ fontSize, fontFamily }}
             />
@@ -207,10 +191,6 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
               <button
                 className="chat-icon-button"
                 onClick={handleSend}
-                /* 
-                  اگر پیام خالی بود یا در حال استریم پاسخ بودیم،
-                  دکمه غیر فعال است
-                */
                 disabled={!message.trim() || isTyping}
               >
                 <Send />

@@ -29,7 +29,6 @@
   margin-bottom: 1rem;
 }
 
-/* خود تصویر لوگو */
 .home-logo {
   width: 180px;
   height: 170px;
@@ -38,7 +37,6 @@
   z-index: 1;
 }
 
-/* انیمیشن Lottie */
 .home-logo-animation {
   position: absolute;
   top: 2;
@@ -46,10 +44,9 @@
   width: 230px;
   height: 230px;
   pointer-events: none;
-  z-index: 0; /* پشت لوگو */
+  z-index: 0;
 }
 
-/* متن خوش‌آمدگویی */
 .home-welcome-text {
   font-size: 2rem;
   color: #0f1b30;
@@ -84,14 +81,12 @@
   cursor: pointer;
 }
 
-/* افکت هاور دکمه */
 .home-button:hover {
   box-shadow: rgba(255, 255, 255, 0.2) 0 3px 15px inset,
     rgba(0, 0, 0, 0.1) 0 3px 5px, rgba(0, 0, 0, 0.1) 0 10px 13px;
   transform: scale(1.05);
 }
 
-/* متن داخل دکمه (مثلاً Voice Chat / Text Chat) */
 .home-button span {
   font-weight: 600;
   text-transform: uppercase;
@@ -99,7 +94,6 @@
   font-size: 1.5rem;
 }
 
-/* Fade-in Animation نمونه (دلخواه) */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -111,7 +105,6 @@
   }
 }
 
-/* ریسپانسیو برای اسکرین‌های کوچک */
 @media (max-width: 768px) {
   .home-content-container {
     flex-direction: column;
