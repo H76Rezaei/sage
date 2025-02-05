@@ -68,6 +68,8 @@ async def conversation(request: Request):
 @app.on_event("startup")
 async def startup_event():
     #warm up whisper
+    #uncomment to warm up whisper at startup
+"""
     try:
         import numpy as np
         dummy_audio = np.zeros(16000, dtype=np.float32)  # 1 second of silence
@@ -75,6 +77,8 @@ async def startup_event():
         print("Whisper model loaded and warmed up successfully.")
     except Exception as e:
         print(f"Error warming up Whisper model: {e}")
+
+"""
 
     #warm up ollama
     #dummy_response = chatbot.stream_workflow_response("Hello, how are you?")
