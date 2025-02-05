@@ -7,17 +7,32 @@ from utils.supabase_utils import fetch_prompt_data
 from model.prompt_manager import PromptManager
 from memory.memory_manager import MemoryManager
 from langchain_core.messages import trim_messages
-from langchain_core.messages import AIMessageChunk, HumanMessage
+from langchain_core.messages import AIMessageChunk, HumanMessage, AIMessage
 from langchain_core.messages.modifier import RemoveMessage
 import torch
 import logging
 import os
 
 
+
 class DigitalCompanion:
     
     MAX_CONTEXT_TOKENS = 128_000
     _model = None
+
+    #add you hugging face api key to companion/default_model_config.json
+    #as follows:
+    """
+    {
+    "model": "meta-llama/Llama-3.2-1B-Instruct",
+    "temperature": 0.5,
+    "max_tokens": 100,
+    "top_p": 0.7,
+    "stream": true,
+    "api_key": ""
+    }
+    """
+    print("I hope you added your huggingFace api key to default_model_config.json")
     config_path = os.path.join(os.path.dirname(__file__), "default_model_config.json")
 
     system_prompt, emotion_prompts = fetch_prompt_data(system_id=13, emotion_group_id=5)
@@ -37,7 +52,7 @@ class DigitalCompanion:
                                 else "mps" if torch.backends.mps.is_available() 
                                 else "cpu")
             
-            #cls._model = ChatOllama(**config)
+            
             cls._model = init_model(**config)
             logging.info(f"Initialized model: {cls._model}")
             
@@ -108,107 +123,118 @@ class DigitalCompanion:
     
     ############################################################################################################   
         
+    async def prepare_context(self, user_input: str):
+        """Prepares context for streaming response"""
+        temp_state = MessagesState(messages=[HumanMessage(content=user_input)])
+        
+        await self.memory_manager.transfer_excess_to_ltm(temp_state)
+        stm_messages = self.trimmer.invoke(temp_state["messages"])
+        relevant_memories = await self.memory_manager.retrieve_relevant_context(query=user_input)
+        detected_emotion, emotion_guidance = DigitalCompanion.emotion_handler.generate_emotion_prompt(user_input)
+        
+        prompt = DigitalCompanion.prompt_manager.prompt_template.format_prompt(
+            messages=stm_messages,
+            detected_emotion=detected_emotion,
+            emotion_prompt=emotion_guidance,
+            recall_memories="\n".join(relevant_memories)
+        ).to_string()
+
+        prompt += "\nAI:"
+        
+        return prompt
+
+    async def stream_workflow_response(self, user_input: str):
+        """Streams response using direct HuggingFace client streaming"""
+        try:
+            # Get formatted prompt
+            prompt = await self.prepare_context(user_input)
+            print("prompt:", prompt)
+
+            accumulated_response = ""
+            
+            # Stream directly using HuggingFace client
+            stream = self.model._client.text_generation(
+                prompt,
+                model=self.model.model_name,
+                max_new_tokens=self.model.max_new_tokens,
+                temperature=self.model.temperature,
+                top_p=self.model.top_p,
+                stream=True,
+                details=True,
+                stop=["<|eot_id|>", "Human:", "AI:"]
+            )
+            
+            for response in stream:
+                if hasattr(response, 'token') and hasattr(response.token, 'text'):
+                    token_text = response.token.text
+                    accumulated_response += token_text
+                    yield token_text
+
+            # Post-process accumulated response
+            accumulated_response = accumulated_response.split("<|eot_id|>")[0].split("Human:")[0].strip()
+            accumulated_response = accumulated_response.split("AI:")[0].strip()
+            print("accumulated resposne ",accumulated_response)
+            
+            # Update workflow state after streaming completes
+            self.app.update_state(
+                self.config,
+                {"messages": [
+                    HumanMessage(content=user_input),
+                    AIMessage(content=accumulated_response)
+                ]}
+            )
+            
+        except Exception as e:
+            logging.error(f"Error during streaming: {e}", exc_info=True)
+            raise
+
     async def call_model(self, state: MessagesState, config: RunnableConfig) -> dict:
-        """
-        Processes the current conversation state and generates a response using the model.
-
-        Args:
-            state (MessagesState): The current state of the conversation, containing messages and context.
-            config (RunnableConfig): Configuration object with runtime parameters.
-
-        Returns:
-            dict: A dictionary containing the AI's response as a list of messages.
-
-        Workflow:
-            1. Manage memory by saving excess messages to long-term memory.
-            2. Trim short-term memory (STM) messages to fit within the token limit.
-            3. Retrieve relevant long-term memories based on the user's input.
-            4. Generate an emotion-guided system prompt based on the user's input.
-            5. Call the model with STM messages and retrieved memories to generate a response.
-
-        Error Handling:
-            - Logs any errors that occur during processing.
-            - Raises the exception with additional context.
-
-        Raises:
-            Exception: If any error occurs during processing.
-        """    
-        
+        """Non-streaming model call used by the workflow graph"""
         try:
-            
             user_input = state["messages"][-1].content
-            
             await self.memory_manager.transfer_excess_to_ltm(state)
-            
             stm_messages = self.trimmer.invoke(state["messages"])
-            logging.info(f"Trimmed short-term memory: {stm_messages}")
             
-            # Step 3: Retrieve relevant long-term memories
             relevant_memories = await self.memory_manager.retrieve_relevant_context(query=user_input)
-            logging.info(f"Retrieved relevant memories: {relevant_memories}")
-            
-            # Step 4: Generate emotion guidance
             detected_emotion, emotion_guidance = DigitalCompanion.emotion_handler.generate_emotion_prompt(user_input)
-            logging.info(f"Generated emotion guidance: {emotion_guidance}")
             
-            valid_input_size = DigitalCompanion.prompt_manager.validate_prompt_size(self.model, detected_emotion, emotion_guidance, relevant_memories, stm_messages, self.max_tokens)
-            
-            if valid_input_size:
+            if DigitalCompanion.prompt_manager.validate_prompt_size(
+                self.model, detected_emotion, emotion_guidance, 
+                relevant_memories, stm_messages, self.max_tokens
+            ):
+                prompt = DigitalCompanion.prompt_manager.prompt_template.format_prompt(
+                    messages=stm_messages,
+                    detected_emotion=detected_emotion,
+                    emotion_prompt=emotion_guidance,
+                    recall_memories="\n".join(relevant_memories)
+                ).to_string()
                 
-                response = await self.bound.ainvoke(
-                        {
-                            "messages": stm_messages,
-                            "detected_emotion": detected_emotion,
-                            "emotion_prompt": emotion_guidance,
-                            "recall_memories": relevant_memories,
-                        },
-                        config
-                    )
-                    
-                #print(f"metadata: response.usage_metadata: {response.usage_metadata}")    ## response.usage_metadata[output_tokens]
-                return {"messages": response}
-        
+                # Use HuggingFace client directly
+                response = self.model._client.text_generation(
+                    prompt,
+                    model=self.model.model_name,
+                    max_new_tokens=self.model.max_new_tokens,
+                    temperature=self.model.temperature,
+                    top_p=self.model.top_p,
+                    details=True,
+                    stop=["<|eot_id|>", "Human:", "AI:"]
+                )
+                # Process generated text
+                response.generated_text = response.generated_text.split("<|eot_id|>")[0].split("Human:")[0].strip()
+                
+                return {"messages": AIMessage(content=response.generated_text)}
+                
         except Exception as e:
-            logging.error(f"Error in call_model: {e}")
-            # Add context to the exception and re-raise
-            raise RuntimeError(f"call_model: Failed to process input for user: {config['configurable'].get('thread_id')}.") from e
-    
-    
-    
-    async def stream_workflow_response(self, user_input:str):
-        # Replace the input with your user's query
-        inputs = [HumanMessage(content=user_input)]
-        first = True
-        gathered = None
-        
-        try:
-            logging.info("Starting to stream the response...")
-            print("Streaming response:\n"
-                  )
-            # Here we specify stream_mode="messages" to get token-level updates.
-            async for msg, metadata in self.app.astream({"messages": inputs}, config=self.config, stream_mode="messages"):
-                # Only print AI message content (chunks), exclude Human messages
-                if msg.content and not isinstance(msg, HumanMessage):
-                    token = msg.content
-                    #print(token, end="", flush=True)
-                    yield token
+            logging.error(f"Error in call_model: {e}", exc_info=True)
+            raise RuntimeError(f"call_model failed: {str(e)}")
 
-                if isinstance(msg, AIMessageChunk):
-                    # Accumulate AIMessageChunks to form a complete AIMessage at the end if needed
-                    if first:
-                        gathered = msg
-                        first = False
-                    else:
-                        gathered = gathered + msg
-
-            logging.info("Streaming completed successfully.")
-            #output_tokens_count = self.app.get_state(self.config).values['messages'][-1].usage_metadata['output_tokens']
-            #print(f"state: {output_tokens_count}")    
-
-            
-        except Exception as e:
-            print(f"Error during streaming: {e}")
-    
+    async def process_input(self, user_input: str):
+        """Non-streaming input processing"""
+        response = await self.app.ainvoke(
+            {"messages": [HumanMessage(content=user_input)]},
+            config=self.config
+        )
+        return response["messages"].content
     
     
     
