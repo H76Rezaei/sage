@@ -177,13 +177,13 @@ async def generate_audio_async(text):
 async def stream_audio_chunks(sentences, cancel_event):
     """Stream audio chunks with proper WAV headers"""
     if cancel_event.is_set():
-                return
+        return
     try:
         await tts_worker.ensure_worker_ready()
-        
         print(f"Starting to process {len(sentences)} sentences")
         if cancel_event.is_set():
-                return
+            return
+
         for i, sentence in enumerate(sentences):
             if cancel_event.is_set():
                 return
@@ -192,35 +192,19 @@ async def stream_audio_chunks(sentences, cancel_event):
                 audio_data = await tts_worker.generate_audio(sentence)
                 if cancel_event.is_set():
                     return
-                if audio_data:
-                    # Verify and convert audio format
-                    input_buffer = BytesIO(audio_data)
-                    try:
-                        # Read the original audio
-                        with sf.SoundFile(input_buffer) as sf_file:
-                            data = sf_file.read()
-                            samplerate = sf_file.samplerate
 
-                            if cancel_event.is_set():
-                                return
-                            
-                            # Write as new WAV file with guaranteed PCM_16 format
-                            output_buffer = BytesIO()
-                            sf.write(output_buffer, data, samplerate, format='WAV', subtype='PCM_16')
-                            output_data = output_buffer.getvalue()
-                            if cancel_event.is_set():
-                                return
-                            print(f"Processed audio chunk: {len(output_data)} bytes, {samplerate}Hz")
-                            yield output_data
-                            print(f"Chunk {i+1} sent to frontend")
-                    except Exception as e:
-                        print(f"Error processing audio format: {e}")
+                if audio_data:
+                    # Instead of re-reading and re-writing the audio,
+                    # yield the received WAV bytes directly.
+                    print(f"Processed audio chunk: {len(audio_data)} bytes")
+                    yield audio_data
+                    print(f"Chunk {i+1} sent to frontend")
                 else:
                     print(f"No audio data generated for sentence {i+1}")
             except Exception as e:
                 print(f"Error processing chunk {i+1}: {e}")
                 continue
-                
+
     except Exception as e:
         print(f"Error in stream_audio_chunks: {e}")
         raise
