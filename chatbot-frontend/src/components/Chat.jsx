@@ -1,9 +1,11 @@
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import TextareaAutosize from "react-textarea-autosize";
-import { Send } from "lucide-react";
-import "./Chat.css";
-import animationData from "./Animation_logo.json";
+import { Send, Mic } from "lucide-react";
 import Lottie from "lottie-react";
+
+import animationData from "./Animation_logo.json";
+import "./Chat.css";
 
 const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
   const [message, setMessage] = useState("");
@@ -12,22 +14,28 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
   const [chatStarted, setChatStarted] = useState(false);
   const streamedResponseRef = useRef("");
 
+  const navigate = useNavigate();
+
+  // تابع ارسال پیام
   const handleSend = async () => {
+    // اگر پیام خالی است یا در حال تایپ هستیم، جلوی ارسال را بگیر
     if (!message.trim() || isTyping) return;
 
+    // اگر چت شروع نشده باشد، حالا شروع می‌شود
     if (!chatStarted) {
       setChatStarted(true);
     }
 
+    // پیام کاربر را به تاریخچه اضافه کن
     const userMessage = {
       text: message,
       sender: "user",
       id: Date.now(),
     };
-
     setChatHistory((prev) => [...prev, userMessage]);
     saveToHistory(userMessage);
 
+    // استریم پاسخ را آغاز کن
     const currentMessage = message;
     setMessage("");
     setIsTyping(true);
@@ -35,12 +43,14 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
 
     try {
       await sendConversation(currentMessage, (streamData) => {
+        // تکه‌های استریم را جمع می‌کنیم
         if (streamData.response) {
           streamedResponseRef.current += streamData.response;
         }
 
         setChatHistory((prevHistory) => {
           const newHistory = [...prevHistory];
+          // پیام بات را پیدا کرده یا ایجاد می‌کنیم
           const lastBotMessageIndex = newHistory.findIndex(
             (msg) =>
               msg.sender === "bot" && msg.conversationId === userMessage.id
@@ -62,6 +72,7 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
           return newHistory;
         });
 
+        // اگر پاسخ نهایی است، می‌توانیم دوباره اجازه‌ی تایپ دهیم
         if (streamData.is_final) {
           saveToHistory({
             text: streamedResponseRef.current,
@@ -83,24 +94,35 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
     }
   };
 
+  // هدایت به صفحه Voice
+  const handleVoiceClick = () => {
+    navigate("/voice");
+  };
+
+  // تابع پاک‌کردن کل چت و بازگشت به خوش‌آمدگویی
+  const handleClearChat = () => {
+    setChatHistory([]);
+    setChatStarted(false);
+    setIsTyping(false);
+  };
+
   return (
-    <div className="chat-container">
+    <div className="chat-chat-container">
+      {/* اگر هنوز چت شروع نشده یا چت خالی است */}
       {!chatStarted && chatHistory.length === 0 ? (
-        <div className="welcome-screen">
-          <div className="logo-container">
-            <img src="/image/logo.png" alt="App Logo" className="logo" />
+        <div className="chat-welcome-screen">
+          <div className="chat-logo-container large">
+            <img src="/image/logo.png" alt="App Logo" className="chat-logo" />
             <Lottie
               animationData={animationData}
               loop={true}
-              className="logo-animation"
+              className="chat-logo-animation"
             />
           </div>
-          <p className="welcome-text" style={{ fontSize, fontFamily }}>
-            How can I help you?
-          </p>
-          <div className="input-container top">
+
+          <div className="chat-input-container top">
             <TextareaAutosize
-              className="chat-input"
+              className="chat-chat-input"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your message..."
@@ -113,23 +135,47 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
               disabled={isTyping}
               style={{ fontSize, fontFamily }}
             />
-            <button
-              className="send-button"
-              onClick={handleSend}
-              disabled={!message.trim() || isTyping}
-            >
-              <Send />
-            </button>
+            <div className="chat-button-container">
+              <button
+                className="chat-icon-button"
+                onClick={handleSend}
+                disabled={!message.trim() || isTyping}
+              >
+                <Send />
+              </button>
+              <button className="chat-icon-button" onClick={handleVoiceClick}>
+                <Mic />
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="chat-screen">
-          <div className="messages-container">
+        // --- حالت پس از شروع چت ---
+        <div className="chat-chat-screen">
+          {/* کانتینر بالا سمت راست: لوگوی کوچک + دکمه Clear Chat */}
+          <div className="chat-top-right">
+            <div className="chat-logo-container small">
+              <img src="/image/logo.png" alt="App Logo" className="chat-logo" />
+              <Lottie
+                animationData={animationData}
+                loop={true}
+                className="chat-logo-animation"
+              />
+            </div>
+
+            <button className="chat-clear-button" onClick={handleClearChat}>
+              Clear Chat
+            </button>
+          </div>
+
+          <div className="chat-messages-container">
             {chatHistory.map((msg, index) => (
               <div
                 key={index}
-                className={`message ${
-                  msg.sender === "user" ? "user-message" : "bot-message"
+                className={`chat-message ${
+                  msg.sender === "user"
+                    ? "chat-user-message"
+                    : "chat-bot-message"
                 } ${msg.isPartial ? "partial-message" : ""}`}
                 style={{ fontSize, fontFamily }}
               >
@@ -137,9 +183,10 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
               </div>
             ))}
           </div>
-          <div className="input-container bottom">
+
+          <div className="chat-input-container bottom">
             <TextareaAutosize
-              className="chat-input"
+              className="chat-chat-input"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your message..."
@@ -149,16 +196,29 @@ const Chat = ({ sendConversation, saveToHistory, fontSize, fontFamily }) => {
                   handleSend();
                 }
               }}
+              /* 
+               در حالی که پاسخ استریم می‌شود، 
+               اجازه‌ی تایپ نداریم
+              */
               disabled={isTyping}
               style={{ fontSize, fontFamily }}
             />
-            <button
-              className="send-button"
-              onClick={handleSend}
-              disabled={!message.trim() || isTyping}
-            >
-              <Send />
-            </button>
+            <div className="chat-button-container">
+              <button
+                className="chat-icon-button"
+                onClick={handleSend}
+                /* 
+                  اگر پیام خالی بود یا در حال استریم پاسخ بودیم،
+                  دکمه غیر فعال است
+                */
+                disabled={!message.trim() || isTyping}
+              >
+                <Send />
+              </button>
+              <button className="chat-icon-button" onClick={handleVoiceClick}>
+                <Mic />
+              </button>
+            </div>
           </div>
         </div>
       )}

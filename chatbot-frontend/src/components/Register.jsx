@@ -7,6 +7,7 @@ function Register() {
     firstName: "",
     lastName: "",
     email: "",
+    password: "", // اضافه کردن فیلد password
     phoneNumber: "",
     birthDate: "",
   });
@@ -15,7 +16,7 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -63,6 +64,14 @@ function Register() {
           name="email"
           placeholder="Email"
           value={formData.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
           onChange={handleChange}
           required
         />

@@ -1,5 +1,5 @@
-/* General chat container */
-.chat-container {
+/* بخش اصلی چت */
+.chat-chat-container {
   height: 95vh;
   max-width: 900px;
   margin: 0 auto 3rem;
@@ -10,8 +10,8 @@
   background-color: #ffffff;
 }
 
-/* Welcome Screen */
-.welcome-screen {
+/* صفحه خوش‌آمدگویی */
+.chat-welcome-screen {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -21,62 +21,121 @@
   background-color: #ffffff;
 }
 
-.logo-container {
+/* وقتی چت شروع شده */
+.chat-chat-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative; /* برای قرار دادن عناصر absolute */
+}
+
+/* 
+  کانتینر بالا سمت راست که شامل لوگوی کوچک و دکمه Clear Chat است
+*/
+.chat-top-right {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* فاصله بین لوگو و دکمه */
+}
+
+/* --- حالت‌های مختلف لوگو --- */
+.chat-logo-container {
   position: relative;
-  width: 180px;
-  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.logo {
-  width: 180px;
-  height: 170px;
-  object-fit: cover;
+/* لوگوی واقعی */
+.chat-logo {
   border-radius: 100%;
   z-index: 1;
+  object-fit: cover;
+}
+
+/* انیمیشن لوتی پشت لوگو */
+.chat-logo-animation {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* حالت بزرگ (Welcome) */
+.chat-logo-container.large {
+  width: 180px;
+  height: 180px;
   margin: 2.5rem;
 }
 
-.logo-animation {
-  position: absolute;
-  top: 1;
-  left: 1;
+.chat-logo-container.large .chat-logo {
+  width: 180px;
+  height: 180px;
+}
 
+.chat-logo-container.large .chat-logo-animation {
   width: 230px;
   height: 230px;
-  pointer-events: none;
-  z-index: 1;
+  top: 1;
+  left: 1;
 }
 
-.welcome-text {
-  font-size: 2rem;
-  color: #0f1b30;
-  text-align: center;
-  margin-bottom: 0.5rem;
-  margin-top: 2rem;
+/* حالت کوچک (بالا-راست در چت) */
+.chat-logo-container.small {
+  width: 60px;
+  height: 60px;
+  position: absolute;
+  top: 0.4rem;
+  right: 18rem;
 }
 
-/* Chat Screen */
-.chat-screen {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.chat-logo-container.small .chat-logo {
+  width: 60px;
+  height: 60px;
+  margin: 0;
+}
+
+.chat-logo-container.small .chat-logo-animation {
+  width: 70px;
+  height: 70px;
+  top: 1;
+  left: 1;
+}
+
+/* دکمه Clear Chat */
+.chat-clear-button {
+  background-color: #8b1212; /* قرمز ملایم */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: background-color 0.2s ease;
+  /* position: absolute; */
+  margin-top: 1.2rem;
+  margin-right: 2rem;
+}
+
+.chat-clear-button:hover {
+  background-color: #e53e3e;
 }
 
 /* Messages container */
-.messages-container {
+.chat-messages-container {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin-top: 6rem;
 }
 
 /* Message styles */
-.message {
+.chat-message {
   max-width: 75%;
   padding: 0.75rem 1rem;
   border-radius: 12px;
@@ -85,50 +144,49 @@
   word-break: break-word;
 }
 
-.user-message {
+.chat-user-message {
   align-self: flex-end;
   background-color: #3182ce;
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
 
-.bot-message {
+.chat-bot-message {
   align-self: flex-start;
   background-color: #edf2f7;
   color: #2d3748;
   border-bottom-left-radius: 4px;
 }
 
-/* Input container (common for both states) */
-.input-container {
+/* Input container (common) */
+.chat-input-container {
   position: relative;
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
   padding: 1rem;
   background-color: #efefef;
   border: none;
   border-radius: 30px;
 }
 
-/* Input container for welcome state (at the top) */
-.input-container.top {
+/* ورودی بالای صفحه (welcome) */
+.chat-input-container.top {
   width: 95%;
+  margin-top: 6rem;
 }
 
-/* Input container for active chat state (at the bottom) */
-.input-container.bottom {
+/* ورودی پایین صفحه (active chat) */
+.chat-input-container.bottom {
   width: 95%;
   margin-top: auto;
   animation: slideIn 0.5s ease-out forwards;
-
   border-radius: 32px;
 }
 
-/* Chat input (textarea) */
-.chat-input {
-  width: 95%;
+/* textarea */
+.chat-chat-input {
+  width: 100%;
   padding: 0.75rem 1rem;
-  padding-right: 60px;
   border: none;
   border-radius: 8px;
   outline: none;
@@ -136,15 +194,22 @@
   background-color: #efefef;
   resize: none;
   overflow: hidden;
-  min-height: 42px;
+  min-height: 34px;
   line-height: 1.5;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.send-button {
+/* کانتینر دکمه‌های ارسال و میکروفن */
+.chat-button-container {
   position: absolute;
   bottom: 10px;
   right: 10px;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* دکمه‌های آیکنی */
+.chat-icon-button {
   width: 40px;
   height: 40px;
   background-color: #3182ce;
@@ -156,24 +221,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0.5rem;
 }
 
-.send-button:disabled {
+.chat-icon-button:disabled {
   background-color: #a0aec0;
   cursor: not-allowed;
 }
 
-.send-button:hover:not(:disabled) {
+.chat-icon-button:hover:not(:disabled) {
   background-color: #2b6cb0;
 }
 
-.send-button svg {
+.chat-icon-button svg {
   width: 20px;
   height: 20px;
 }
 
-/* Slide in animation for input container in chat screen */
+/* انیمیشن اسلاید ورود ورودی */
 @keyframes slideIn {
   from {
     transform: translateY(-50%);
@@ -185,51 +249,52 @@
   }
 }
 
-.input-container.bottom {
-  animation: slideIn 0.5s ease-out forwards;
-}
-
-/* Responsive styles */
+/* ریسپانسیو برای نمایشگرهای کوچک */
 @media (max-width: 768px) {
-  .chat-container {
+  .chat-chat-container {
     max-width: 100%;
     margin: 0;
   }
-
-  .messages-container {
+  .chat-messages-container {
     padding: 0.75rem;
   }
-
-  /* در حالت موبایل نیز ابعاد دکمه ارسال ثابت باقی می‌ماند */
-  .chat-input {
-    width: 100%;
+  .chat-chat-input {
     margin-bottom: 0.5rem;
   }
-}
-
-@media (max-width: 480px) {
-  .message {
-    max-width: 90%;
-    font-size: 0.875rem;
+  .chat-logo-container.large {
+    width: 150px;
+    height: 150px;
   }
-
-  .send-button svg {
-    width: 18px;
-    height: 18px;
+  .chat-logo-container.large .chat-logo {
+    width: 150px;
+    height: 150px;
+  }
+  .chat-logo-container.large .chat-logo-animation {
+    width: 190px;
+    height: 190px;
+  }
+  .chat-clear-button {
+    font-size: 1rem;
+    padding: 0.4rem 0.6rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .chat-container {
+  .chat-logo-container.small {
+    width: 60px;
+    height: 60px;
+    position: absolute;
+    top: 0.8rem;
+    right: 50rem;
+  }
+  .chat-chat-container {
     max-width: 900px;
   }
-
-  .message {
+  .chat-message {
     max-width: 70%;
   }
-
-  .user-message,
-  .bot-message {
+  .chat-user-message,
+  .chat-bot-message {
     max-width: 75%;
   }
 }
