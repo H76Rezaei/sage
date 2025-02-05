@@ -2,6 +2,7 @@ import logging
 from typing import List
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import AIMessage, HumanMessage
+from model.model_utils import ChatHuggingFace
 
 
 
@@ -101,8 +102,11 @@ class PromptManager:
     
 
 ############################################################################################################
+    def str_token_counter(self, model: ChatHuggingFace, text: str) -> int:
+        """Counts tokens using the HFLLaMAModel's tokenizer."""
+        return len(model.get_token_ids(text))
 
-    def str_token_counter(self, model, text: str) -> int:
+    def str_token_counter_original(self, model, text: str) -> int:
         """
         Counts the number of tokens in a given text using the model's tokenizer.
 
@@ -118,7 +122,7 @@ class PromptManager:
     
     ############################################################################################################    
     def calculate_total_tokens(self, 
-                              model,
+                              model:ChatHuggingFace,
                               detected_emotion: str,
                               emotion_guidance: str,
                               recall_memories: List[str], 
@@ -146,7 +150,7 @@ class PromptManager:
     
     
     
-    def validate_prompt_size(self, model, detected_emotion, emotion_guidance, recall_memories, stm_messages, max_tokens: int) -> bool:
+    def validate_prompt_size(self, model:ChatHuggingFace, detected_emotion, emotion_guidance, recall_memories, stm_messages, max_tokens: int) -> bool:
         
         total_tokens = self.calculate_total_tokens(model, detected_emotion, emotion_guidance, recall_memories, stm_messages)
         if total_tokens > self.max_context_tokens - max_tokens:
