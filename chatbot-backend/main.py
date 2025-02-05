@@ -71,7 +71,7 @@ async def startup_event():
     try:
         import numpy as np
         dummy_audio = np.zeros(16000, dtype=np.float32)  # 1 second of silence
-        stt_utils.model.transcribe(dummy_audio, fp16=False)
+        stt_utils.model.transcribe(dummy_audio, beam_size=1)
         print("Whisper model loaded and warmed up successfully.")
     except Exception as e:
         print(f"Error warming up Whisper model: {e}")
