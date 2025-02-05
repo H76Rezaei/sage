@@ -93,13 +93,12 @@ class KokoroTTSWorker:
                 break
 
     async def generate_audio(self, text):
-        """Thread-safe audio generation with proper chunking"""
+        """Thread-safe audio generation with optimized chunk reading."""
         try:
             await self.ensure_worker_ready()
-            
             if self.process is None or self.process.stdin is None:
                 raise RuntimeError("TTS worker is not running")
-            
+                
             async with self._stdin_lock, self._stdout_lock:
                 # Send request
                 message = json.dumps({"type": "generate", "text": text})
@@ -112,28 +111,21 @@ class KokoroTTSWorker:
                 size_bytes = await self.process.stdout.read(4)
                 if not size_bytes:
                     raise RuntimeError("Worker closed connection")
-                
                 total_size = int.from_bytes(size_bytes, 'big')
                 print(f"Expecting {total_size} bytes of audio data")
                 
-                # Read all data
-                audio_data = bytearray()
-                remaining = total_size
-                
-                while remaining > 0:
-                    chunk = await self.process.stdout.read(min(remaining, 32768))
-                    if not chunk:
-                        break
-                    audio_data.extend(chunk)
-                    remaining -= len(chunk)
+                # Use readexactly if supported
+                try:
+                    audio_data = await self.process.stdout.readexactly(total_size)
+                except asyncio.IncompleteReadError as e:
+                    audio_data = e.partial
                 
                 return bytes(audio_data)
-                
-        except Exception as e:
-            print(f"Error generating audio: {e}")
+        except Exception as e:  
             self.process = None
             self.ready.clear()
             raise
+
 
 
     async def shutdown(self):

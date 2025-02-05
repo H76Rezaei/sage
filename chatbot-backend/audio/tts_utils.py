@@ -40,46 +40,35 @@ cancel_event = asyncio.Event()
 
 async def convert_to_wav(audio: UploadFile):
     """
-    Convert input audio file to WAV format using ffmpeg.
-    
-    Args:
-        audio (UploadFile): Input audio file to be converted
-    
-    Returns:
-        BytesIO: Converted WAV audio in memory
+    Convert input audio file to WAV format using ffmpeg only if necessary.
     """
     try:
-        # Read uploaded audio file
         audio_data = await audio.read()
         input_audio = BytesIO(audio_data)
-        output_audio = BytesIO()
 
-        # Use ffmpeg to convert audio to WAV format
+        # If the uploaded file is already WAV, return it directly.
+        if audio.content_type == "audio/wav":
+            logger.debug("Uploaded audio is already in WAV format.")
+            return input_audio
+
+        output_audio = BytesIO()
         process = (
             ffmpeg
             .input('pipe:0')
             .output('pipe:1', format='wav')
             .run_async(pipe_stdin=True, pipe_stdout=True, pipe_stderr=True)
         )
-
-        # Write and process input audio data
         stdout, stderr = process.communicate(input=input_audio.read())
 
-        # Log any ffmpeg conversion errors
         if stderr:
-            print(f"ffmpeg error: {stderr.decode()}")
-
-        # Store converted audio in memory buffer
+            logger.debug(f"ffmpeg error: {stderr.decode()}")
         output_audio.write(stdout)
         output_audio.seek(0)
-
-        # Log converted audio size for debugging
-        print(f"Converted audio size: {output_audio.getbuffer().nbytes} bytes")
-
+        logger.debug(f"Converted audio size: {output_audio.getbuffer().nbytes} bytes")
         return output_audio
     except Exception as e:
-        # Handle conversion errors
         raise HTTPException(status_code=500, detail="Error during conversion to WAV: " + str(e))
+
 
 def convert_wav_to_mp3(wav_file, mp3_file):
     """
