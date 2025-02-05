@@ -10,6 +10,7 @@ from audio.tts_utils import (
 )
 import subprocess
 from fastapi.responses import FileResponse
+from audio import stt_utils
 
 # Initialize digital companion chatbot
 chatbot = DigitalCompanion()
@@ -66,6 +67,30 @@ async def conversation(request: Request):
 
 @app.on_event("startup")
 async def startup_event():
+    #warm up whisper
+    try:
+        import numpy as np
+        dummy_audio = np.zeros(16000, dtype=np.float32)  # 1 second of silence
+        stt_utils.model.transcribe(dummy_audio, fp16=False)
+        print("Whisper model loaded and warmed up successfully.")
+    except Exception as e:
+        print(f"Error warming up Whisper model: {e}")
+
+    #warm up ollama
+    #dummy_response = chatbot.stream_workflow_response("Hello, how are you?")
+    #print("Ollama loaded and warmed up successfully.")
+
+    try:
+        # Collect the entire response to ensure full model initialization
+        full_response = ""
+        async for chunk in chatbot.stream_workflow_response("Hello, how are you?"):
+                full_response += chunk
+        print(f"Ollama warmed up with prompt: Hello, how are you")
+        print("Full repsonse: ", full_response)
+
+    except Exception as e:
+        print(f"Error warming up Ollama")
+
     # Initialize the worker
     await tts_worker.ensure_worker_ready()
 
