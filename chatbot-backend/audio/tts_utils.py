@@ -251,7 +251,7 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
             
         if cancel_event.is_set():
                 return    
-        response_text = preprocess_text(response_text)
+        #response_text = preprocess_text(response_text)
         sentences = sent_tokenize(response_text)
 
         if cancel_event.is_set():

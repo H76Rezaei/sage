@@ -29,8 +29,8 @@ class MemoryManager:
                                                             index_name=index_name, 
                                                             embed_model=embedding_model, 
                                                             embed_dim=embedding_dim)
-        if not MemoryManager.summarizer:
-            MemoryManager.summarizer = Summarizer(model= model)
+        #if not MemoryManager.summarizer:
+        #    MemoryManager.summarizer = Summarizer(model= model)
                 
         self.retriever = get_retriever(MemoryManager.vector_store, max_results=max_results, score_threshold=score_threshold, namespace=user_id)    
         self.user_id = user_id
@@ -61,8 +61,8 @@ class MemoryManager:
                     combined_messages.append(f"Human: {msg.content}")
                 elif isinstance(msg, AIMessage):
                     # Use the summarizer (callable) to summarize the AI response
-                    summarized_content = await MemoryManager.summarizer.summerize_AI_message(msg.content)
-                    combined_messages.append(f"AI: {summarized_content}")
+                    #summarized_content = await MemoryManager.summarizer.summerize_AI_message(msg.content)
+                    combined_messages.append(f"AI: {msg.content}")
 
             if not combined_messages:
                 logging.warning("No messages to save to long-term memory.")
