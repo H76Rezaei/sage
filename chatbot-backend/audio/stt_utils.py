@@ -23,7 +23,7 @@ else:
 # Load the Faster-Whisper model (model size: tiny, base, small, large)
 model = WhisperModel("base", device=device, compute_type=compute_type)
 
-print("whisper device is:", device)
+#print("whisper device is:", device)
 
 
 def downsample_audio(audio_data: BytesIO) -> BytesIO:
