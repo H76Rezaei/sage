@@ -26,7 +26,6 @@ const MainPage = ({ fontSize, fontFamily }) => {
   return (
     <div className="home-main-container">
       <div className="home-main-container">
-        {/* بخش خوش‌آمدگویی جدید */}
         <div className="home-welcome-screen">
           <div className="home-logo-container">
             <img src="/image/logo.png" alt="App Logo" className="home-logo" />
