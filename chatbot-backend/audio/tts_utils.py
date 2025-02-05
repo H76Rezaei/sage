@@ -102,7 +102,7 @@ async def cancel_stream():
     """
     # Set global cancellation event
     cancel_event.set()
-    print("Cancel event triggered")
+    #print("Cancel event triggered")
     return JSONResponse(content={"message": "Processing cancelled."}, status_code=200)
 
   
@@ -116,7 +116,7 @@ async def generate_audio_async(text):
         python_executable = os.path.join(kokoro_venv_path, "Scripts", "python.exe")
         audio_dir = os.path.dirname(os.path.abspath(__file__))
         
-        print(f"Generating audio for: {text}")
+        #print(f"Generating audio for: {text}")
         if cancel_event.is_set():
                 return
         process = await asyncio.create_subprocess_exec(
@@ -134,11 +134,11 @@ async def generate_audio_async(text):
         stdout, stderr = await process.communicate()
         
         if stderr:
-            print(f"Error from Kokoro: {stderr.decode()}")
+            #print(f"Error from Kokoro: {stderr.decode()}")
             return None
             
         if not stdout:
-            print("No audio data received")
+            #print("No audio data received")
             return None
         
         if cancel_event.is_set():
@@ -169,7 +169,7 @@ async def stream_audio_chunks(sentences, cancel_event):
         return
     try:
         await tts_worker.ensure_worker_ready()
-        print(f"Starting to process {len(sentences)} sentences")
+        #print(f"Starting to process {len(sentences)} sentences")
         if cancel_event.is_set():
             return
 
@@ -177,7 +177,7 @@ async def stream_audio_chunks(sentences, cancel_event):
             if cancel_event.is_set():
                 return
             try:
-                print(f"Processing sentence {i+1}/{len(sentences)}: {sentence}")
+                #print(f"Processing sentence {i+1}/{len(sentences)}: {sentence}")
                 audio_data = await tts_worker.generate_audio(sentence)
                 if cancel_event.is_set():
                     return
@@ -185,9 +185,9 @@ async def stream_audio_chunks(sentences, cancel_event):
                 if audio_data:
                     # Instead of re-reading and re-writing the audio,
                     # yield the received WAV bytes directly.
-                    print(f"Processed audio chunk: {len(audio_data)} bytes")
+                    #print(f"Processed audio chunk: {len(audio_data)} bytes")
                     yield audio_data
-                    print(f"Chunk {i+1} sent to frontend")
+                    #print(f"Chunk {i+1} sent to frontend")
                 else:
                     print(f"No audio data generated for sentence {i+1}")
             except Exception as e:
@@ -211,7 +211,7 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
             return JSONResponse(content={"error": stt_result["error"]}, status_code=400)
             
         user_input = stt_result["text"]
-        print(f"Processing user input: {user_input}")
+        #print(f"Processing user input: {user_input}")
 
         if cancel_event.is_set():
                 return

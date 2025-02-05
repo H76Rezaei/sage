@@ -38,7 +38,7 @@ def run_server():
 
             if request["type"] == "generate":
                 text = request["text"]
-                print(f"Generating audio for: {text}", file=sys.stderr)
+                #print(f"Generating audio for: {text}", file=sys.stderr)
                 
                 samples, sample_rate = model.create(
                     text,
@@ -56,7 +56,7 @@ def run_server():
                 sf.write(audio_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
                 audio_data = audio_buffer.getvalue()
 
-                print(f"Generated audio size: {len(audio_data)} bytes", file=sys.stderr)
+                #print(f"Generated audio size: {len(audio_data)} bytes", file=sys.stderr)
 
                 # Send full size first
                 stdout.write(len(audio_data).to_bytes(4, 'big'))
@@ -68,7 +68,7 @@ def run_server():
                     stdout.write(chunk)
                     stdout.flush()
                 
-                print(f"Audio data sent successfully", file=sys.stderr)
+                #print(f"Audio data sent successfully", file=sys.stderr)
 
         except Exception as e:
             print(f"Server error: {e}", file=sys.stderr)

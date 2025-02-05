@@ -112,7 +112,7 @@ class KokoroTTSWorker:
                 if not size_bytes:
                     raise RuntimeError("Worker closed connection")
                 total_size = int.from_bytes(size_bytes, 'big')
-                print(f"Expecting {total_size} bytes of audio data")
+                #print(f"Expecting {total_size} bytes of audio data")
                 
                 # Use readexactly if supported
                 try:
