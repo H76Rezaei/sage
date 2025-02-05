@@ -65,7 +65,7 @@ class MemoryManager:
                     combined_messages.append(f"AI: {msg.content}")
 
             if not combined_messages:
-                logging.warning("No messages to save to long-term memory.")
+                #logging.warning("No messages to save to long-term memory.")
                 return
             
             combined_text = "\n".join(combined_messages)
@@ -77,7 +77,7 @@ class MemoryManager:
                 ids=[str(uuid.uuid4())],
             )
             self.is_saved_in_pinecone = True
-            logging.info("Messages saved to long-term memory.")
+            #logging.info("Messages saved to long-term memory.")
         
         except Exception as e:
             logging.error(f"Error saving messages to LTM: {e}")
@@ -97,7 +97,7 @@ class MemoryManager:
         try:
             docs = await self.retriever.ainvoke(query, filter={"session_id": self.thread_id})
             results = [doc.page_content for doc in docs]
-            logging.info(f"Retrieved {len(results)} relevant memories for query: {query}")
+            #logging.info(f"Retrieved {len(results)} relevant memories for query: {query}")
             return results
         except Exception as e:
             logging.error(f"Error retrieving context: {e}")
