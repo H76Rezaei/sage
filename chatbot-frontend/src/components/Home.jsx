@@ -6,22 +6,7 @@ import animationData from "./Animation_logo.json";
 import Lottie from "lottie-react";
 
 const MainPage = ({ fontSize, fontFamily }) => {
-  const [displayText, setDisplayText] = useState("");
-  const fullText = " How can I assist you today?";
   const navigate = useNavigate();
-
-  // useEffect(() => {
-  //   let currentIndex = 0;
-  //   const intervalId = setInterval(() => {
-  //     setDisplayText(fullText.slice(0, currentIndex + 1));
-  //     currentIndex++;
-  //     if (currentIndex === fullText.length) {
-  //       clearInterval(intervalId);
-  //     }
-  //   }, 60);
-
-  //   return () => clearInterval(intervalId);
-  // }, []);
 
   return (
     <div className="home-main-container">
