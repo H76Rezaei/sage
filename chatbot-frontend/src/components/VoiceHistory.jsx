@@ -1,23 +1,27 @@
 import React from "react";
 import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import "./VoiceHistory.css";
 
-const VoiceHistory = ({ onSelectOption, chatHistory }) => {
+const VoiceHistory = ({ onSelectOption, chatHistory, onClearChat }) => {
+  const navigate = useNavigate();
   return (
     <div className="voice-history-container">
       {/* Header Section */}
       <div className="voice-history-header">
-        {/* <button
-          className="back-button"
-          onClick={() => onSelectOption("voiceChat")}
+        <button
+          className="voice-history-back-button"
+          onClick={() => navigate("/voice")}
         >
           <ArrowLeft />
-        </button> */}
-        <h1>Voice Chat</h1>
+        </button>
+        <button className="voice-history-clear-button" onClick={onClearChat}>
+          Clear Chat
+        </button>
       </div>
 
       {/* Chat History Section */}
-      <div className="messages-container">
+      <div className="voice-history-messages-container">
         {chatHistory.map((msg, index) => (
           <div
             key={index}
@@ -26,7 +30,11 @@ const VoiceHistory = ({ onSelectOption, chatHistory }) => {
             }`}
           >
             {msg.type === "audio" ? (
-              <audio controls src={msg.content} className="audio-player" />
+              <audio
+                controls
+                src={msg.content}
+                className="voice-history-audio-player"
+              />
             ) : (
               msg.content
             )}

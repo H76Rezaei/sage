@@ -15,7 +15,6 @@ import Settings from "./components/Settings";
 import VoiceHistory from "./components/VoiceHistory";
 import AboutMe from "./components/AboutMe";
 import MedicationReminder from "./components/MedicationReminder";
-
 import Login from "./components/Login";
 import Register from "./components/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -66,11 +65,12 @@ function App() {
       localStorage.removeItem("access_token");
       navigate("/login");
     };
-    // return (
-    //   <button className="logout-button" onClick={handleLogout}>
-    //     Logout
-    //   </button>
-    // );
+
+    return (
+      <button className="logout-button" onClick={handleLogout}>
+        Logout
+      </button>
+    );
   };
 
   return (
@@ -89,7 +89,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <div>
-                    <LogoutButton />
                     <Routes>
                       <Route
                         path="/"
@@ -125,7 +124,12 @@ function App() {
                       />
                       <Route
                         path="/voice-history"
-                        element={<VoiceHistory chatHistory={chatHistory} />}
+                        element={
+                          <VoiceHistory
+                            chatHistory={chatHistory}
+                            onClearChat={() => setChatHistory([])}
+                          />
+                        }
                       />
                       <Route
                         path="/settings"

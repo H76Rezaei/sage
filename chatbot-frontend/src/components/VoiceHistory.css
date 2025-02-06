@@ -1,20 +1,24 @@
 .voice-history-container {
+  height: 95vh;
+  max-width: 900px;
+  margin: 0 auto 3rem;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  border-radius: 12px;
+  overflow: hidden;
   background-color: #ffffff;
 }
 
 .voice-history-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  background-color: #f1f1f1;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem 1.5rem;
 }
 
-.back-button {
+/* دکمه بازگشت */
+.voice-history-back-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,20 +31,21 @@
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
-
-.back-button:hover {
+.voice-history-back-button:hover {
   background-color: #2b6cb0;
 }
 
+/* عنوان هدر */
 .voice-history-header h1 {
-  margin: 0 auto;
-  font-size: 1.4rem;
-  color: #333;
   flex: 1;
   text-align: center;
+  font-size: 1.4rem;
+  color: #2d3748;
+  margin: 0;
 }
 
-.voice-clear-button {
+/* دکمه Clear Chat */
+.voice-history-clear-button {
   background-color: #f56565;
   color: #ffffff;
   border: none;
@@ -50,42 +55,93 @@
   font-size: 0.9rem;
   transition: background-color 0.2s ease;
 }
-
-.voice-clear-button:hover {
+.voice-history-clear-button:hover {
   background-color: #e53e3e;
 }
 
-.messages-container {
+/* بخش پیام‌ها */
+.voice-history-messages-container {
   flex: 1;
-  padding: 1rem;
+  padding: 1rem 1.5rem;
   overflow-y: auto;
 }
 
-.message {
+/* استایل پیام‌ها */
+.voice-history-message {
   padding: 0.75rem 1rem;
   border-radius: 12px;
   line-height: 1.4;
   margin-bottom: 0.75rem;
   max-width: 75%;
   word-break: break-word;
+  font-size: 1rem;
 }
 
-.user-message {
+/* پیام‌های کاربر */
+.voice-history-user-message {
   align-self: flex-end;
   background-color: #3182ce;
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
 
-.bot-message {
+/* پیام‌های بات */
+.voice-history-bot-message {
   align-self: flex-start;
   background-color: #edf2f7;
   color: #2d3748;
   border-bottom-left-radius: 4px;
 }
 
-.audio-player {
+/* پلیر صوتی */
+.voice-history-audio-player {
   outline: none;
   width: 100%;
   margin-top: 0.5rem;
+}
+
+/* Media Queries برای نمایشگرهای کوچک */
+@media (max-width: 768px) {
+  .voice-history-header {
+    padding: 0.75rem 1rem;
+  }
+  .voice-history-back-button {
+    width: 35px;
+    height: 35px;
+  }
+  .voice-history-header h1 {
+    font-size: 1.2rem;
+  }
+  .voice-history-clear-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  .voice-history-messages-container {
+    padding: 0.75rem 1rem;
+  }
+  .voice-history-message {
+    font-size: 0.95rem;
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .voice-history-header {
+    flex-direction: row;
+    text-align: center;
+  }
+  .voice-history-back-button {
+    margin-bottom: 0.5rem;
+    margin-left: 3rem;
+    margin-top: 0.5rem;
+  }
+  .voice-history-clear-button {
+    margin-bottom: 0.5rem;
+  }
+  .voice-history-header h1 {
+    font-size: 1.1rem;
+  }
+  .voice-history-message {
+    font-size: 0.9rem;
+  }
 }
