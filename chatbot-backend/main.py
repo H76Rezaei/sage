@@ -6,7 +6,7 @@ import json
 #from llama.generation import stream_generation
 #from llama.model_manager import get_model_and_tokenizer
 #from llama.prompt_manager import get_initial_prompts
-from fastapi import FastAPI, Request, UploadFile
+from fastapi import FastAPI, Request, UploadFile ,Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from speech import  voice_to_text , text_to_speech, new_tts, cashed
 from TTS.api import TTS
@@ -26,43 +26,7 @@ import wave
 import asyncio
 
 
-#----------------------------------------
-from fastapi import Depends, HTTPException
-from auth import register_user, login_user
-from profile import get_profile, update_profile
-from fastapi.security import OAuth2PasswordBearer
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-def get_current_user_id(token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("user_id")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-        return user_id
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-
-@app.post("/register")
-def register(first_name: str, last_name: str, email: str, password: str):
-    return register_user(first_name, last_name, email, password)
-
-@app.post("/login")
-def login(email: str, password: str):
-    return login_user(email, password)
-
-@app.get("/profile")
-def profile(current_user_id: int = Depends(get_current_user_id)):
-    return get_profile(current_user_id)
-
-@app.put("/profile")
-def update_profile_endpoint(current_user_id: int = Depends(get_current_user_id),
-                            first_name: str = None, last_name: str = None,
-                            phone_number: str = None, birth_date: str = None):
-    return update_profile(current_user_id, first_name, last_name, phone_number, birth_date)
-
-#----------------------------------------------------------------------------------------------------
 
 tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
 
@@ -71,6 +35,91 @@ chatbot = DigitalCompanion()
 #llama model and tokenizer
 #model, tokenizer = get_model_and_tokenizer()
 app = FastAPI()
+
+
+#########################################################################
+# from user.user import router as user_router
+from User.user import router as user_router
+
+
+
+import jwt
+from fastapi.security import OAuth2PasswordBearer
+# from jwt.exceptions import DecodeError
+
+
+
+
+
+
+
+SECRET_KEY = os.environ.get("SECRET_KEY", "your_secret_key")
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/user/login")
+
+import jwt
+
+def get_current_user_id(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return user_id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+
+
+
+
+
+
+app.include_router(user_router, prefix="/user", tags=["User"])
+
+
+
+
+#----------------------------------------
+# from fastapi import Depends, HTTPException
+# from auth import register_user, login_user
+# from profile import get_profile, update_profile
+# from fastapi.security import OAuth2PasswordBearer
+
+
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# def get_current_user_id(token: str = Depends(oauth2_scheme)):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         user_id = payload.get("user_id")
+#         if user_id is None:
+#             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+#         return user_id
+#     except JWTError:
+#         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+# @app.post("/register")
+# def register(first_name: str, last_name: str, email: str, password: str):
+#     return register_user(first_name, last_name, email, password)
+
+# @app.post("/login")
+# def login(email: str, password: str):
+#     return login_user(email, password)
+
+# @app.get("/profile")
+# def profile(current_user_id: int = Depends(get_current_user_id)):
+#     return get_profile(current_user_id)
+
+# @app.put("/profile")
+# def update_profile_endpoint(current_user_id: int = Depends(get_current_user_id),
+#                             first_name: str = None, last_name: str = None,
+#                             phone_number: str = None, birth_date: str = None):
+#     return update_profile(current_user_id, first_name, last_name, phone_number, birth_date)
+
+#----------------------------------------------------------------------------------------------------
+
+
 
 # Add CORS middleware
 app.add_middleware(

@@ -1,13 +1,55 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
+  const token = localStorage.getItem("access_token");
+  const [userName, setUserName] = useState("");
 
-  const handleLoginClick = () => {
+  // Fetch user profile to get user's name if token exists
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (token) {
+        try {
+          const response = await fetch("http://localhost:8000/profile", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (!response.ok) {
+            throw new Error("Failed to fetch profile");
+          }
+          const data = await response.json();
+          // Combine first name and last name
+          setUserName(`${data.first_name} ${data.last_name}`);
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+        }
+      }
+    };
+    fetchUserProfile();
+  }, [token]);
+
+  // Handle authentication button click:
+  // If token exists, perform logout, otherwise navigate to login
+  const handleAuthClick = () => {
     toggleSidebar();
-    navigate("/login");
+    if (token) {
+      localStorage.removeItem("access_token");
+      navigate("/login");
+    } else {
+      navigate("/login");
+    }
+  };
+
+  // When clicking on the profile area, navigate to the profile page if logged in
+  const handleProfileClick = () => {
+    if (token) {
+      toggleSidebar();
+      navigate("/profile");
+    }
   };
 
   return (
@@ -60,11 +102,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </div>
 
       <div className="bottomSection">
-        <div className="profile">
-          <p>Guest User</p>
+        <div
+          className="profile"
+          onClick={handleProfileClick}
+          style={{ cursor: token ? "pointer" : "default" }}
+        >
+          <p>{token ? userName || "Loading..." : "Guest User"}</p>
         </div>
-        <button className="loginButton" onClick={handleLoginClick}>
-          Login/Sign Up
+        <button className="loginButton" onClick={handleAuthClick}>
+          {token ? "Logout" : "Login"}
         </button>
       </div>
     </div>

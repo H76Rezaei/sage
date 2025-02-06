@@ -1,124 +1,71 @@
-.auth-container {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 20px;
-
-  font-family: "Arial", sans-serif;
-}
-
-/* Header Title */
-.auth-container h2 {
-  text-align: center;
-  font-size: 24px;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-/* Auth Form */
-.auth-form {
+.Register-container {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f5f7fa;
 }
 
-.auth-form input {
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  outline: none;
-  transition: border-color 0.3s ease;
+.Register-card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 350px;
 }
 
-.auth-form input:focus {
-  border-color: #6a11cb; /* Highlight color */
-}
-
-.auth-form button {
-  padding: 10px 15px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #fff;
-  background: linear-gradient(90deg, #6a11cb, #2575fc);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
-
-.auth-form button:hover {
-  background: linear-gradient(90deg, #2575fc, #6a11cb);
-  transform: translateY(-2px);
-}
-
-.auth-form button:active {
-  transform: translateY(0);
-}
-
-/* Register Redirect Section */
-.register-redirect {
-  margin-top: 20px;
+.Register-card h2 {
   text-align: center;
+  margin-bottom: 1.5rem;
+  color: #333;
 }
 
-.register-redirect p {
-  font-size: 14px;
+.Register-form-group {
+  margin-bottom: 1rem;
+}
+
+.Register-form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
   color: #555;
 }
 
-.registerButton {
-  margin-top: 10px;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: bold;
+.Register-form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.Register-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #007bff;
   color: #fff;
-  background: linear-gradient(90deg, #ff7e5f, #feb47b);
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
+  margin-top: 1rem;
 }
 
-.registerButton:hover {
-  background: linear-gradient(90deg, #feb47b, #ff7e5f);
-  transform: translateY(-2px);
+.Register-button:hover {
+  background: #0069d9;
 }
 
-.registerButton:active {
-  transform: translateY(0);
+.Register-link {
+  color: #007bff;
+  text-decoration: none;
 }
 
-/* Responsive Design */
-@media screen and (max-width: 768px) {
-  .auth-container {
-    max-width: 90%;
-    margin: 30px auto;
-    padding: 15px;
-  }
-
-  .auth-form input {
-    font-size: 14px;
-  }
-
-  .auth-form button,
-  .registerButton {
-    font-size: 14px;
-    padding: 8px 10px;
-  }
+.Register-link:hover {
+  text-decoration: underline;
 }
 
-@media screen and (max-width: 480px) {
-  .auth-container {
-    max-width: 100%;
-    margin: 20px auto;
-    padding: 10px;
-    box-shadow: none;
-    border: none;
-  }
-
-  .auth-form button,
-  .registerButton {
-    font-size: 12px;
-    padding: 8px;
-  }
+.Register-error {
+  background: #ffcccc;
+  color: #a33;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  text-align: center;
 }
