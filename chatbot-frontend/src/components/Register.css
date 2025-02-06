@@ -1,0 +1,72 @@
+.Register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.Register-card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 8px;
+
+  width: 350px;
+}
+
+.Register-card h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.Register-form-group {
+  margin-bottom: 1rem;
+}
+
+.Register-form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.Register-form-group input {
+  width: 89%;
+  padding: 1.2rem;
+  border: none;
+  border-radius: 16px;
+  background-color: #ebe9e9;
+}
+
+.Register-button {
+  width: 100%;
+  padding: 1rem;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.Register-button:hover {
+  background: #0069d9;
+}
+
+.Register-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.Register-link:hover {
+  text-decoration: underline;
+}
+
+.Register-error {
+  background: #ffcccc;
+  color: #a33;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}

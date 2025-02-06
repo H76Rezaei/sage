@@ -1,0 +1,125 @@
+/* Overall Auth Container */
+.auth-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+
+  font-family: "Arial", sans-serif;
+}
+
+/* Header Title */
+.auth-container h2 {
+  text-align: center;
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* Auth Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-form input {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.auth-form input:focus {
+  border-color: #6a11cb; /* Highlight color */
+}
+
+.auth-form button {
+  padding: 10px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(90deg, #6a11cb, #2575fc);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.auth-form button:hover {
+  background: linear-gradient(90deg, #2575fc, #6a11cb);
+  transform: translateY(-2px);
+}
+
+.auth-form button:active {
+  transform: translateY(0);
+}
+
+/* Register Redirect Section */
+.register-redirect {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.register-redirect p {
+  font-size: 14px;
+  color: #555;
+}
+
+.registerButton {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(90deg, #ff7e5f, #feb47b);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.registerButton:hover {
+  background: linear-gradient(90deg, #feb47b, #ff7e5f);
+  transform: translateY(-2px);
+}
+
+.registerButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .auth-container {
+    max-width: 90%;
+    margin: 30px auto;
+    padding: 15px;
+  }
+
+  .auth-form input {
+    font-size: 14px;
+  }
+
+  .auth-form button,
+  .registerButton {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .auth-container {
+    max-width: 100%;
+    margin: 20px auto;
+    padding: 10px;
+    box-shadow: none;
+    border: none;
+  }
+
+  .auth-form button,
+  .registerButton {
+    font-size: 12px;
+    padding: 8px;
+  }
+}

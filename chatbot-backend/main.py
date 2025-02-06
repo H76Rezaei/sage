@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, BackgroundTasks, UploadFile
+from fastapi import FastAPI, Request, BackgroundTasks, UploadFile,Depends ,HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
@@ -12,11 +12,37 @@ import subprocess
 from fastapi.responses import FileResponse
 from audio import stt_utils
 
+
+from User.user import router as user_router
+import jwt
+from fastapi.security import OAuth2PasswordBearer
+
 # Initialize digital companion chatbot
 chatbot = DigitalCompanion()
 
 # Create FastAPI application instance
 app = FastAPI()
+
+
+#---------------------------------User Authentication---------------------------------#
+SECRET_KEY = os.environ.get("SECRET_KEY", "your_secret_key")
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/user/login")
+
+
+
+def get_current_user_id(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return user_id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+#---------------------------------User Authentication---------------------------------#
 
 # Configure Cross-Origin Resource Sharing (CORS) middleware
 # Allows requests from any origin, with all HTTP methods and headers
