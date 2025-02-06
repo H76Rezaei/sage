@@ -8,29 +8,29 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const [userName, setUserName] = useState("");
 
   // Fetch user profile to get user's name if token exists
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (token) {
-        try {
-          const response = await fetch("http://localhost:8000/profile", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          if (!response.ok) {
-            throw new Error("Failed to fetch profile");
-          }
-          const data = await response.json();
-          // Combine first name and last name
-          setUserName(`${data.first_name} ${data.last_name}`);
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-        }
-      }
-    };
-    fetchUserProfile();
-  }, [token]);
+  // useEffect(() => {
+  //   const fetchUserProfile = async () => {
+  //     if (token) {
+  //       try {
+  //         const response = await fetch("http://localhost:8000/user/profile", {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //             "Content-Type": "application/json",
+  //           },
+  //         });
+  //         if (!response.ok) {
+  //           throw new Error("Failed to fetch profile");
+  //         }
+  //         const data = await response.json();
+  //         // Combine first name and last name
+  //         setUserName(`${data.first_name} ${data.last_name}`);
+  //       } catch (error) {
+  //         console.error("Error fetching profile:", error);
+  //       }
+  //     }
+  //   };
+  //   fetchUserProfile();
+  // }, [token]);
 
   // Handle authentication button click:
   // If token exists, perform logout, otherwise navigate to login
@@ -107,7 +107,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           onClick={handleProfileClick}
           style={{ cursor: token ? "pointer" : "default" }}
         >
-          <p>{token ? userName || "Loading..." : "Guest User"}</p>
+          {/* <p>{token ? userName || "Loading..." : "Guest User"}</p> */}
         </div>
         <button className="loginButton" onClick={handleAuthClick}>
           {token ? "Logout" : "Login"}

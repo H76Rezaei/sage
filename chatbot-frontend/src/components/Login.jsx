@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
+import animationData from "./Animation_logo.json";
+import Lottie from "lottie-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -34,25 +36,31 @@ const Login = () => {
 
   return (
     <div className="Login-container">
+      <div className="home-logo-container">
+        <img src="/image/logo.png" alt="App Logo" className="home-logo" />
+        <Lottie
+          animationData={animationData}
+          loop={true}
+          className="home-logo-animation"
+        />
+      </div>
       <div className="Login-card">
         <h2>Login</h2>
         {errorMsg && <div className="Login-error">{errorMsg}</div>}
         <form onSubmit={handleSubmit}>
-          <div className="Login-group">
-            <label>Email</label>
+          <div className="Login-form-group">
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="   Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="Login-form-group">
-            <label>Password</label>
             <input
               type="password"
-              placeholder="Enter your password"
+              placeholder="   Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
