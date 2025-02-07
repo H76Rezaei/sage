@@ -9,12 +9,12 @@ import numpy as np
 
 
 
-model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+model = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
 
 def run_server():
     """Run as a persistent TTS server process"""
     print("Initializing Kokoro TTS server...", file=sys.stderr)
-    model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+    model = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     print("Model loaded successfully", file=sys.stderr)
 
     stdin = os.fdopen(sys.stdin.fileno(), 'rb', buffering=0)
