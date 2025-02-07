@@ -29,7 +29,9 @@ filtered_logs = merged_logs[merged_logs['version_id'].isin(selected_versions)].c
 # Initialize models
 similarity_model = SentenceTransformer('stsb-roberta-large')
 
+#to calculate perplexity (we don't use this metric)
 gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2-medium").to('cuda' if torch.cuda.is_available() else 'cpu')
+#to calculate tokens
 gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium")
 
 # Initialize lemmatizer
@@ -63,6 +65,7 @@ def calculate_semantic_similarity(default_bot_response_text, response_text):
     similarity_score = util.cos_sim(default_bot_response_embedding, response_embedding)
     return similarity_score.item()
 
+# we do not need this metric
 def calculate_perplexity(text, gpt2_model, gpt2_tokenizer):
     encodings = gpt2_tokenizer(text, return_tensors='pt', truncation=True, max_length=1024).to(gpt2_model.device)
     nlls = []
