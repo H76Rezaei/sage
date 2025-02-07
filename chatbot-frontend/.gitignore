@@ -12,6 +12,10 @@
 /build
 
 venv/
+chatbot-backend/kokoro_env/
+chatbot-backend/audio/kokoro-v1.0.onnx
+chatbot-backend/audio/voices-v1.0.bin
+
 
 # misc
 .DS_Store
