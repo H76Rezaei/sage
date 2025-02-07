@@ -121,7 +121,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       audioContextRef.current = audioContext;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const volumeThreshold = 20; // Threshold for detecting speech.
+      const volumeThreshold = 40; // Threshold for detecting speech.
       
 
       // Recursive function to detect silence.
