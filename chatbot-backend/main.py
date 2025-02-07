@@ -15,6 +15,7 @@ from audio import stt_utils
 
 from User.user import router as user_router
 import jwt
+import os
 from fastapi.security import OAuth2PasswordBearer
 
 # Initialize digital companion chatbot
