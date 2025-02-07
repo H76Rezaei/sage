@@ -42,6 +42,9 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
         return user_id
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    
+    app.include_router(user_router, prefix="/user", tags=["User"])
+
 
 #---------------------------------User Authentication---------------------------------#
 
