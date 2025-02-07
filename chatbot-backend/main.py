@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "your_secret_key")
 ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/user/login")
-
+from User.user import router as user_router
 
 
 def get_current_user_id(token: str = Depends(oauth2_scheme)):
@@ -43,9 +43,11 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)):
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     
-    app.include_router(user_router, prefix="/user", tags=["User"])
+   
 
 
+
+app.include_router(user_router, prefix="/user", tags=["User"])
 #---------------------------------User Authentication---------------------------------#
 
 # Configure Cross-Origin Resource Sharing (CORS) middleware
