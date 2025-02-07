@@ -93,9 +93,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
       // Clean up previous media resources if any.
       if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream
-          .getTracks()
-          .forEach((track) => track.stop());
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -115,8 +113,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       isProcessingRef.current = false; // Reset processing flag.
 
       // Set up audio context and analyser for silence detection.
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
       const source = audioContext.createMediaStreamSource(stream);
@@ -124,15 +121,17 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       audioContextRef.current = audioContext;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const volumeThreshold = 20; // Threshold for detecting speech.
+      const volumeThreshold = 40; // Threshold for detecting speech.
+      
 
       // Recursive function to detect silence.
       const detectSilence = () => {
         if (!isRecordingRef.current) return; // Exit if recording is stopped.
 
         analyser.getByteFrequencyData(dataArray);
-        const avgVolume =
-          dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+       
 
         if (avgVolume > volumeThreshold) {
           // User is speaking.
@@ -209,9 +208,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       if (mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream
-          .getTracks()
-          .forEach((track) => track.stop());
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
       mediaRecorderRef.current = null;
     }
@@ -255,11 +252,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
         console.log("User audio recorded:", audioBlob);
         setChatHistory((prev) => [
           ...prev,
-          {
-            type: "audio",
-            sender: "user",
-            content: URL.createObjectURL(audioBlob),
-          },
+          { type: "audio", sender: "user", content: URL.createObjectURL(audioBlob) },
         ]);
 
         try {
@@ -289,9 +282,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
     // Notify the server of the cancellation.
     try {
-      const response = await fetch("http://127.0.0.1:8000/cancel", {
-        method: "POST",
-      });
+      const response = await fetch("http://127.0.0.1:8000/cancel", { method: "POST" });
       if (response.ok) {
         console.log("Cancellation confirmed on the server.");
       }
@@ -368,9 +359,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
 
         if (value && value.byteLength > 0) {
           // Accumulate new data.
-          const combinedData = new Uint8Array(
-            accumulatedData.length + value.length
-          );
+          const combinedData = new Uint8Array(accumulatedData.length + value.length);
           combinedData.set(accumulatedData, 0);
           combinedData.set(value, accumulatedData.length);
           accumulatedData = combinedData;
@@ -388,16 +377,9 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
               let dataLength = accumulatedData.length - startIndex;
               if (dataLength >= 8) {
                 const riffChunkSize =
-                  new DataView(
-                    accumulatedData.buffer,
-                    startIndex + 4,
-                    4
-                  ).getUint32(0, true) + 8;
+                  new DataView(accumulatedData.buffer, startIndex + 4, 4).getUint32(0, true) + 8;
                 if (dataLength >= riffChunkSize) {
-                  const wavData = accumulatedData.subarray(
-                    startIndex,
-                    startIndex + riffChunkSize
-                  );
+                  const wavData = accumulatedData.subarray(startIndex, startIndex + riffChunkSize);
                   const chunkBlob = new Blob([wavData], { type: "audio/wav" });
 
                   // Process only if still current.
@@ -426,11 +408,7 @@ const VoiceChat = ({ onSelectOption, sendAudioToBackend, setChatHistory }) => {
       // Mark that the stream has ended.
       streamEnded = true;
       // If nothing is playing and the queue is empty, resume recording immediately.
-      if (
-        !isPlaying &&
-        playbackQueue.length === 0 &&
-        requestId === currentRequestId.current
-      ) {
+      if (!isPlaying && playbackQueue.length === 0 && requestId === currentRequestId.current) {
         console.log("Stream ended and no pending chunks; resuming recording.");
         resumeRecording();
       }
