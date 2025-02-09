@@ -59,7 +59,7 @@ def process_and_store_conversations(version_id: int, user_id: str):
 
 if __name__ == "__main__":
     user_id = "test_user"
-    process_and_store_conversations(10, user_id)
+    process_and_store_conversations(3, user_id)
 
 
 
