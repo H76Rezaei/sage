@@ -25,8 +25,10 @@ const VoiceHistory = ({ onSelectOption, chatHistory, onClearChat }) => {
         {chatHistory.map((msg, index) => (
           <div
             key={index}
-            className={`message ${
-              msg.sender === "user" ? "user-message" : "bot-message"
+            className={`voice-history-message ${
+              msg.sender === "user"
+                ? "voice-history-user-message"
+                : "voice-history-bot-message"
             }`}
           >
             {msg.type === "audio" ? (
