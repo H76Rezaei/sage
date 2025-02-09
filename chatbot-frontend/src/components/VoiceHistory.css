@@ -59,16 +59,15 @@
 .voice-history-messages-container {
   flex: 1;
   padding: 1rem 1.5rem;
-  overflow-y: auto;
 }
 .voice-history-message {
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  line-height: 1.4;
+  padding: 0.75rem;
+  border-radius: 28px;
+  line-height: 1;
   margin-bottom: 0.75rem;
-  max-width: 75%;
+  max-width: 50%;
   word-break: break-word;
-  font-size: 1rem;
+  font-size: 0.5rem;
 }
 
 .voice-history-user-message {
@@ -76,13 +75,17 @@
   background-color: #3182ce;
   color: #ffffff;
   border-bottom-right-radius: 4px;
+  width: 50%;
+  margin-left: 25rem;
 }
 
 .voice-history-bot-message {
   align-self: flex-start;
-  background-color: #edf2f7;
+  background-color: #cdba12;
   color: #2d3748;
   border-bottom-left-radius: 4px;
+
+  width: 50%;
 }
 
 .voice-history-audio-player {
@@ -94,6 +97,9 @@
 @media (max-width: 768px) {
   .voice-history-header {
     padding: 0.75rem 1rem;
+  }
+  .voice-history-user-message {
+    margin-left: 11rem;
   }
   .voice-history-back-button {
     width: 35px;
