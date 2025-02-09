@@ -130,6 +130,8 @@ async def conversation(request: Request ,  user_id: str = Depends(get_current_us
 
 @app.on_event("startup")
 async def startup_event():
+    import nltk
+    nltk.download('punkt_tab')
     #warm up whisper
     try:
         import numpy as np
@@ -177,7 +179,7 @@ async def handle_conversation_audio_stream(audio: UploadFile, background_tasks: 
     3. Stream text-to-speech audio chunks
     """
     companion = get_chatbot_instance(user_id)
-    return await conversation_audio_stream_kokoro(audio, background_tasks, chatbot , companion)
+    return await conversation_audio_stream_kokoro(audio, background_tasks, companion)
 
 if __name__ == "__main__":
     # Run FastAPI application using Uvicorn ASGI server
