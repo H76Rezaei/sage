@@ -12,6 +12,7 @@
 /build
 
 venv/
+chatbot-backend/kokoro_env
 
 # misc
 .DS_Store
