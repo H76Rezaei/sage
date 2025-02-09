@@ -32,7 +32,7 @@ class MemoryManager:
         #if not MemoryManager.summarizer:
         #    MemoryManager.summarizer = Summarizer(model= model)
                 
-        self.retriever = get_retriever(MemoryManager.vector_store, max_results=max_results, score_threshold=score_threshold, namespace=user_id)    
+        self.retriever = get_retriever(MemoryManager.vector_store, max_results=max_results, score_threshold=score_threshold, namespace=str(user_id))    
         self.user_id = user_id
         self.thread_id = thread_id
         self.stm_limit = stm_limit
@@ -70,9 +70,9 @@ class MemoryManager:
             
             combined_text = "\n".join(combined_messages)
 
-            await MemoryManager.vector_store.aadd_texts(
+            MemoryManager.vector_store.aadd_texts(
                 texts=[combined_text],
-                namespace=self.user_id,
+                namespace=str(self.user_id),
                 metadatas=[{'session_id': self.thread_id}],
                 ids=[str(uuid.uuid4())],
             )
