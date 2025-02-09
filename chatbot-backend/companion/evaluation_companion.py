@@ -43,7 +43,7 @@ class DigitalCompanion:
         self.app = self.setup_workflow()
         self.bound = self.prompt_manager.prompt_template | self.model 
         self.trimmer = trim_messages(strategy = "last", max_tokens = params['max_history_length'], token_counter= len)
-        self.output_tokens = None
+        #self.output_tokens = None
     ############################################################################################################  
     def setup_config(self) -> RunnableConfig:
         
@@ -103,7 +103,10 @@ class DigitalCompanion:
         
         try:
             
+            
+            
             user_input = state["messages"][-1].content
+            logging.info(f"Processing input: {user_input}")
             
             await self.memory_manager.transfer_excess_to_ltm(state)
             
@@ -119,6 +122,7 @@ class DigitalCompanion:
             logging.info(f"Generated emotion guidance: {emotion_guidance}")
             
             valid_input_size = self.prompt_manager.validate_prompt_size(self.model, detected_emotion, emotion_guidance, relevant_memories, stm_messages, self.max_tokens)
+            logging.info(f"Valid input size: {valid_input_size}")
             
             if valid_input_size:
                 
@@ -131,9 +135,10 @@ class DigitalCompanion:
                         },
                         config
                     )
+                logging.info(f"Generated response: {response}")
                 
-                self.output_tokens = response.usage_metadata['output_tokens']    
-                logging.info(f"metadata: response.usage_metadata: {response.usage_metadata}")    
+                #self.output_tokens = response.usage_metadata['output_tokens']    
+                #logging.info(f"metadata: response.usage_metadata: {response.usage_metadata}")    
                  
         
         except Exception as e:
