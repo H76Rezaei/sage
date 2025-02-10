@@ -88,7 +88,7 @@ def preprocess_text(text):
 
     text = text.replace("’", "'")  # Replace curly apostrophes
     text = text.replace("…", "...")  # Replace ellipsis character
-    text = re.sub(r"[^\w\s.,?!:-']", "", text)  # Keep word chars, whitespace, and basic punctuation
+    text = re.sub(r"[^\w\s.,?!']", "", text)  # Keep word chars, whitespace, and basic punctuation
     text = re.sub(r"\s+", " ", text).strip()  # Remove extra whitespace
     return text
 
@@ -224,7 +224,7 @@ async def conversation_audio_stream_kokoro(audio: UploadFile, background_tasks: 
             
         if cancel_event.is_set():
                 return    
-        #response_text = preprocess_text(response_text)
+        response_text = preprocess_text(response_text)
         sentences = sent_tokenize(response_text)
 
         if cancel_event.is_set():
