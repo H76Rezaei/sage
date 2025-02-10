@@ -6,17 +6,19 @@ from companion.digital_companion import DigitalCompanion
 from audio.tts_utils import (
     cancel_stream,
     conversation_audio_stream_kokoro,
-    tts_worker
+    tts_worker,
 )
 import subprocess
 from fastapi.responses import FileResponse
 from audio import stt_utils
 
 
+
 from User.user import router as user_router
 import jwt
 import os
 from fastapi.security import OAuth2PasswordBearer
+
 
 # Initialize digital companion chatbot
 # chatbot = DigitalCompanion()
@@ -141,10 +143,7 @@ async def startup_event():
     except Exception as e:
         print(f"Error warming up Whisper model: {e}")
 
-    #warm up ollama
-    #dummy_response = chatbot.stream_workflow_response("Hello, how are you?")
-    #print("Ollama loaded and warmed up successfully.")
-
+    #warm up ollama:
     try:
         # Collect the entire response to ensure full model initialization
         temp_companion = DigitalCompanion(user_id="warmup", thread_id="warmup")
@@ -159,6 +158,30 @@ async def startup_event():
 
     # Initialize the worker
     await tts_worker.ensure_worker_ready()
+
+    # warm up Kokoro:
+    # Generate a sample audio to confirm TTS worker
+    try:
+        from audio.tts_utils import stream_audio_chunks, cancel_event
+        
+        # Prepare a startup confirmation text
+        startup_text = ["TTS worker is ready and operational."]
+        
+        # Use stream_audio_chunks to generate and verify audio
+        audio_chunks = []
+        async for chunk in stream_audio_chunks(startup_text, cancel_event):
+            audio_chunks.append(chunk)
+        
+        # Confirm audio chunks were generated
+        if audio_chunks and len(audio_chunks) > 0:
+            print("Successfully generated startup audio. TTS worker is ready.")
+            print(f"Generated {len(audio_chunks)} audio chunk(s)")
+        else:
+            print("Failed to generate startup audio.")
+    
+    except Exception as e:
+        print(f"Error during startup audio generation: {e}")
+
 
 @app.post("/cancel")
 async def handle_cancel_stream():

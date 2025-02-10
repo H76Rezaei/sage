@@ -20,7 +20,7 @@ class DigitalCompanion:
     _model = None
     config_path = os.path.join(os.path.dirname(__file__), "default_model_config.json")
 
-    system_prompt, emotion_prompts = fetch_prompt_data(system_id=13, emotion_group_id=5)
+    system_prompt, emotion_prompts = fetch_prompt_data(system_id=17, emotion_group_id=6)
     prompt_manager = PromptManager(system_prompt= system_prompt)
     emotion_handler = EmotionHandler(emotion_prompts)
     
@@ -52,7 +52,7 @@ class DigitalCompanion:
                  score_threshold = 0.8,
                  max_db_results = 3,
                  embedding_dim = 1024,
-                 user_id = "test_user",
+                 user_id = "test_3_with_demo_script",
                  thread_id = "test_session"):
         
         config = load_json_config(self.config_path)
