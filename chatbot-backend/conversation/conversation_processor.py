@@ -37,11 +37,11 @@ async def process_streaming(handler, conversation, version_id):
         # Calculate the total response time and append results
         full_response_time = time.time() - start_time
         
-        output_tokens_count = handler.get_output_tokens_count()
+        """ output_tokens_count = handler.get_output_tokens_count()
         handler.output_tokens_count = None
         logging.info(f'token count: {output_tokens_count}')
         if output_tokens_count == None:
-            raise ValueError("No tokens generated in response.")
+            raise ValueError("No tokens generated in response.") """
         
         response_records.append(
             {
@@ -50,7 +50,7 @@ async def process_streaming(handler, conversation, version_id):
                 'generated_response': response_text.strip(),
                 'full_response_time': full_response_time,
                 'response_time_first_token': first_token_time,
-                'output_tokens_count': output_tokens_count,
+                #'output_tokens_count': output_tokens_count,
             }
         )
 
