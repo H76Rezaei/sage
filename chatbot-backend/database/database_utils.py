@@ -27,7 +27,7 @@ def fetch_parameters(version_id: int) -> dict:
         dict: A dictionary containing all parameters for the given version_id.
     """
     ## Fetch version data
-    version_data = supabase.table('versions').select('*').eq('id', version_id).execute()
+    version_data = supabase.table('new_versions').select('*').eq('id', version_id).execute()
     
     if not version_data.data:
         raise ValueError(f"Version with id {version_id} not found in the database.")
@@ -62,7 +62,7 @@ def fetch_distinct_conv_ids():
     """
     conv_ids_DB = supabase.rpc('distinct_values', {
         'column_name': 'conv_id',
-        'table_name': 'conversation_logs'
+        'table_name': 'new_conversation_logs'
     }).execute()
 
     if not conv_ids_DB.data:
@@ -119,7 +119,7 @@ def store_evaluation_results(response_records: list):
     logging.info("Storing evaluation results in the database...")
     for record in response_records:
         try:
-            result = supabase.table('evaluation').insert(record).execute()
+            result = supabase.table('new_evaluation').insert(record).execute()
             
             if not result.data:
                 logging.error(f"Failed to store evaluation record for log ID {record['log_id']}.")
