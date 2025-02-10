@@ -12,22 +12,58 @@ nltk.download('wordnet')
 nltk.download('omw-1.4')
 
 # Load conversation logs
-generated_responses = pd.read_csv("generated_responses.csv")
-conversation_logs_sample = pd.read_csv("conversation_logs_sample.csv")
+#generated_responses = pd.read_csv("generated_responses.csv")
+#conversation_logs_sample = pd.read_csv("conversation_logs_sample.csv")
+
+generated_responses = pd.read_csv("new_evaluation.csv")
+conversation_logs_sample = pd.read_csv("new_conversation_logs.csv")
 
 # Merge the two DataFrames based on matching IDs
-merged_logs = pd.merge(generated_responses, conversation_logs_sample, left_on='log_id', right_on='id', how='left')
+#merged_logs = pd.merge(generated_responses, conversation_logs_sample, left_on='log_id', right_on='id', how='left')
 
 # Drop unnecessary columns
-columns_to_drop = ['created_at', 'id_x', 'conv_id', 'turn_id', 'user_input']
-merged_logs = merged_logs.drop(columns=columns_to_drop, errors='ignore') 
+#columns_to_drop = ['created_at', 'id_x', 'conv_id', 'turn_id', 'user_input']
+#merged_logs = merged_logs.drop(columns=columns_to_drop, errors='ignore') 
 
 # Filter for specific version IDs
-selected_versions = [3, 5, 9, 11, 14]
+#selected_versions = [3, 5, 9, 11, 14]
+#filtered_logs = merged_logs[merged_logs['version_id'].isin(selected_versions)].copy()
+
+#merged_logs = pd.merge(generated_responses, conversation_logs_sample, left_on='log_id', right_on='id', how='left')
+
+# Filter for versions 1 through 5 (adjust this list as needed)
+#selected_versions = [1, 2, 3, 4, 5]
+#filtered_logs = merged_logs[merged_logs['version_id'].isin(selected_versions)].copy()
+
+
+# Load data
+generated_responses = pd.read_csv("new_evaluation.csv")
+conversation_logs_sample = pd.read_csv("new_conversation_logs.csv")
+
+# Ensure column names are correct
+print("Generated Responses Columns:", generated_responses.columns)
+print("Conversation Logs Columns:", conversation_logs_sample.columns)
+
+# Merge DataFrames on log_id
+merged_logs = pd.merge(
+    generated_responses, 
+    conversation_logs_sample[['id', 'default_bot_response']],  # Keep only necessary columns
+    left_on='log_id', 
+    right_on='id',  
+    how='left'
+)
+
+# Verify merge results
+print(merged_logs[['log_id', 'version_id', 'default_bot_response', 'generated_response']].head(10))
+
+selected_versions = [1, 2, 3, 4, 5]
 filtered_logs = merged_logs[merged_logs['version_id'].isin(selected_versions)].copy()
+
 
 # Initialize models
 similarity_model = SentenceTransformer('stsb-roberta-large')
+#similarity_model = SentenceTransformer('intfloat/multilingual-e5-large')
+
 
 gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2-medium").to('cuda' if torch.cuda.is_available() else 'cpu')
 gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium")
@@ -133,6 +169,8 @@ for sent1, sent2 in test_sentences:
 filtered_logs['semantic_similarity'] = semantic_similarities
 filtered_logs['perplexity'] = perplexities
 filtered_logs['output_tokens_count'] = token_counts
+filtered_logs['avg_semantic_similarity'] = filtered_logs.groupby('version_id')['semantic_similarity'].transform('mean')
+
 
 # Save the updated DataFrame with explicit float formatting
 output_path = 'conversation_logs_with_metrics.csv'
