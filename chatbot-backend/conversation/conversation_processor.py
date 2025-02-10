@@ -50,7 +50,7 @@ async def process_streaming(handler, conversation, version_id):
                 'generated_response': response_text.strip(),
                 'full_response_time': full_response_time,
                 'response_time_first_token': first_token_time,
-                #'output_tokens_count': output_tokens_count,
+                ##'output_tokens_count': output_tokens_count,
             }
         )
 
