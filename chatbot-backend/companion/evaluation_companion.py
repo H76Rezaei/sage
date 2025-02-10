@@ -17,7 +17,7 @@ class DigitalCompanion:
   
     def __init__(self, 
                  params: dict,
-                 index_name = "chatbot-eval-memory-1024",
+                 index_name = "chatbot-eval-memory",
                  user_id = "test-user",
                  thread_id = "test-session"):
         
