@@ -182,5 +182,5 @@ class LlamaCloudHandler(ModelHandlerBase):
             formatted_prompt += f"Emotion Guidance: {emotion_prompt.strip()}\n"
 
         # Add user input and ensure Assistant's response is marked clearly
-        formatted_prompt += f"User: {user_input.strip()}\nAssistant:"
+        formatted_prompt += f"User: {user_input.strip()}\n Provide a single answer. Stop immediately after finishing Assistant response. \nAssistant:"
         return formatted_prompt
