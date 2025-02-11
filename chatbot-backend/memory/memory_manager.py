@@ -70,7 +70,7 @@ class MemoryManager:
             
             combined_text = "\n".join(combined_messages)
 
-            MemoryManager.vector_store.aadd_texts(
+            await MemoryManager.vector_store.aadd_texts(
                 texts=[combined_text],
                 namespace=str(self.user_id),
                 metadatas=[{'session_id': self.thread_id}],
