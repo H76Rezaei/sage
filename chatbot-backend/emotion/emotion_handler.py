@@ -32,7 +32,7 @@ class EmotionHandler:
 
         try:
             emotion_data = self.emotion_detector.detect_emotion(user_input)
-            logging.info(f"Detected emotion data: {emotion_data}")
+            #logging.info(f"Detected emotion data: {emotion_data}")
             return emotion_data["primary_emotion"]
         except Exception as e:
             logging.error(f"Error detecting emotion: {e}")
@@ -51,7 +51,7 @@ class EmotionHandler:
         try:
             detected_emotion = self.detect_emotion_tag(user_input)
             emotion_guidance = self.emotion_prompts.get(detected_emotion, "")
-            logging.info(f"Generated prompt for emotion '{detected_emotion}': {emotion_guidance}")
+            #logging.info(f"Generated prompt for emotion '{detected_emotion}': {emotion_guidance}")
             return detected_emotion, emotion_guidance
         except Exception as e:
             logging.error(f"Error generating emotion prompt: {e}")

@@ -28,7 +28,7 @@ def init_model(
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         
-    logging.info(f"Using device: {device}")
+    #logging.info(f"Using device: {device}")
     
     model = ChatOllama(
         model=model,

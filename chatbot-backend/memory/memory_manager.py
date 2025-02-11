@@ -32,7 +32,7 @@ class MemoryManager:
         #if not MemoryManager.summarizer:
         #    MemoryManager.summarizer = Summarizer(model= model)
                 
-        self.retriever = get_retriever(MemoryManager.vector_store, max_results=max_results, score_threshold=score_threshold, namespace=user_id)    
+        self.retriever = get_retriever(MemoryManager.vector_store, max_results=max_results, score_threshold=score_threshold, namespace=str(user_id))    
         self.user_id = user_id
         self.thread_id = thread_id
         self.stm_limit = stm_limit
@@ -65,19 +65,19 @@ class MemoryManager:
                     combined_messages.append(f"AI: {msg.content}")
 
             if not combined_messages:
-                logging.warning("No messages to save to long-term memory.")
+                #logging.warning("No messages to save to long-term memory.")
                 return
             
             combined_text = "\n".join(combined_messages)
 
             await MemoryManager.vector_store.aadd_texts(
                 texts=[combined_text],
-                namespace=self.user_id,
+                namespace=str(self.user_id),
                 metadatas=[{'session_id': self.thread_id}],
                 ids=[str(uuid.uuid4())],
             )
             self.is_saved_in_pinecone = True
-            logging.info("Messages saved to long-term memory.")
+            #logging.info("Messages saved to long-term memory.")
         
         except Exception as e:
             logging.error(f"Error saving messages to LTM: {e}")
@@ -97,7 +97,7 @@ class MemoryManager:
         try:
             docs = await self.retriever.ainvoke(query, filter={"session_id": self.thread_id})
             results = [doc.page_content for doc in docs]
-            logging.info(f"Retrieved {len(results)} relevant memories for query: {query}")
+            #logging.info(f"Retrieved {len(results)} relevant memories for query: {query}")
             return results
         except Exception as e:
             logging.error(f"Error retrieving context: {e}")

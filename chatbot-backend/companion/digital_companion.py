@@ -20,7 +20,7 @@ class DigitalCompanion:
     _model = None
     config_path = os.path.join(os.path.dirname(__file__), "default_model_config.json")
 
-    system_prompt, emotion_prompts = fetch_prompt_data(system_id=13, emotion_group_id=5)
+    system_prompt, emotion_prompts = fetch_prompt_data(system_id=17, emotion_group_id=6)
     prompt_manager = PromptManager(system_prompt= system_prompt)
     emotion_handler = EmotionHandler(emotion_prompts)
     
@@ -49,10 +49,10 @@ class DigitalCompanion:
                  stm_limit=7,
                  index_name = "chatbot-memory",
                  embedding_model = 'intfloat/multilingual-e5-large',
-                 score_threshold = 0.8,
-                 max_db_results = 3,
+                 score_threshold = 0.3,
+                 max_db_results = 7,
                  embedding_dim = 1024,
-                 user_id = "test_user",
+                 user_id = "test_3_with_demo_script",
                  thread_id = "test_session"):
         
         config = load_json_config(self.config_path)
@@ -141,15 +141,15 @@ class DigitalCompanion:
             await self.memory_manager.transfer_excess_to_ltm(state)
             
             stm_messages = self.trimmer.invoke(state["messages"])
-            logging.info(f"Trimmed short-term memory: {stm_messages}")
+            #logging.info(f"Trimmed short-term memory: {stm_messages}")
             
             # Step 3: Retrieve relevant long-term memories
             relevant_memories = await self.memory_manager.retrieve_relevant_context(query=user_input)
-            logging.info(f"Retrieved relevant memories: {relevant_memories}")
+            #logging.info(f"Retrieved relevant memories: {relevant_memories}")
             
             # Step 4: Generate emotion guidance
             detected_emotion, emotion_guidance = DigitalCompanion.emotion_handler.generate_emotion_prompt(user_input)
-            logging.info(f"Generated emotion guidance: {emotion_guidance}")
+            #logging.info(f"Generated emotion guidance: {emotion_guidance}")
             
             valid_input_size = DigitalCompanion.prompt_manager.validate_prompt_size(self.model, detected_emotion, emotion_guidance, relevant_memories, stm_messages, self.max_tokens)
             
@@ -182,9 +182,9 @@ class DigitalCompanion:
         gathered = None
         
         try:
-            logging.info("Starting to stream the response...")
-            print("Streaming response:\n"
-                  )
+            #logging.info("Starting to stream the response...")
+            #print("Streaming response:\n"
+            #      )
             # Here we specify stream_mode="messages" to get token-level updates.
             async for msg, metadata in self.app.astream({"messages": inputs}, config=self.config, stream_mode="messages"):
                 # Only print AI message content (chunks), exclude Human messages
@@ -201,7 +201,7 @@ class DigitalCompanion:
                     else:
                         gathered = gathered + msg
 
-            logging.info("Streaming completed successfully.")
+            #logging.info("Streaming completed successfully.")
             #output_tokens_count = self.app.get_state(self.config).values['messages'][-1].usage_metadata['output_tokens']
             #print(f"state: {output_tokens_count}")    
 

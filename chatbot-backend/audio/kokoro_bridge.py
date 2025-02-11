@@ -9,12 +9,12 @@ import numpy as np
 
 
 
-model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+model = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
 
 def run_server():
     """Run as a persistent TTS server process"""
     print("Initializing Kokoro TTS server...", file=sys.stderr)
-    model = Kokoro("kokoro-v0_19.onnx", "voices.bin")
+    model = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     print("Model loaded successfully", file=sys.stderr)
 
     stdin = os.fdopen(sys.stdin.fileno(), 'rb', buffering=0)
@@ -38,7 +38,7 @@ def run_server():
 
             if request["type"] == "generate":
                 text = request["text"]
-                print(f"Generating audio for: {text}", file=sys.stderr)
+                #print(f"Generating audio for: {text}", file=sys.stderr)
                 
                 samples, sample_rate = model.create(
                     text,
@@ -47,6 +47,18 @@ def run_server():
                     lang="en-us"
                 )
 
+                if isinstance(samples, bytes):
+                    # Assume samples is already a WAV file.
+                    audio_data = samples
+                else:
+                    # Convert raw samples to WAV.
+                    if samples.dtype != np.int16:
+                        samples = (samples * 32767).astype(np.int16)
+                    audio_buffer = BytesIO()
+                    sf.write(audio_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
+                    audio_data = audio_buffer.getvalue()
+
+                """
                 # Normalize and convert to int16
                 if samples.dtype != np.int16:
                     samples = (samples * 32767).astype(np.int16)
@@ -55,8 +67,9 @@ def run_server():
                 audio_buffer = BytesIO()
                 sf.write(audio_buffer, samples, sample_rate, format='WAV', subtype='PCM_16')
                 audio_data = audio_buffer.getvalue()
+                """
 
-                print(f"Generated audio size: {len(audio_data)} bytes", file=sys.stderr)
+                #print(f"Generated audio size: {len(audio_data)} bytes", file=sys.stderr)
 
                 # Send full size first
                 stdout.write(len(audio_data).to_bytes(4, 'big'))
@@ -68,7 +81,7 @@ def run_server():
                     stdout.write(chunk)
                     stdout.flush()
                 
-                print(f"Audio data sent successfully", file=sys.stderr)
+                #print(f"Audio data sent successfully", file=sys.stderr)
 
         except Exception as e:
             print(f"Server error: {e}", file=sys.stderr)

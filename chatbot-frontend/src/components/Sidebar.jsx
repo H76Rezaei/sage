@@ -1,8 +1,30 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("access_token");
+  const [userName, setUserName] = useState("");
+
+  const handleAuthClick = () => {
+    toggleSidebar();
+    if (token) {
+      localStorage.removeItem("access_token");
+      navigate("/login");
+    } else {
+      navigate("/login");
+    }
+  };
+
+  // When clicking on the profile area, navigate to the profile page if logged in
+  const handleProfileClick = () => {
+    if (token) {
+      toggleSidebar();
+      navigate("/profile");
+    }
+  };
+
   return (
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
       {/* Close Button for Mobile */}
@@ -53,15 +75,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </div>
 
       <div className="bottomSection">
-        <div className="profile">
-          <img
-            src="https://via.placeholder.com/50"
-            alt="User Avatar"
-            className="avatar"
-          />
-          <p>Guest User</p>
+        <div
+          className="profile"
+          onClick={handleProfileClick}
+          style={{ cursor: token ? "pointer" : "default" }}
+        >
+          {/* <p>{token ? userName || "Loading..." : "Guest User"}</p> */}
         </div>
-        <button className="loginButton">Login/Sign Up</button>
+        <button className="loginButton" onClick={handleAuthClick}>
+          {token ? "Logout" : "Login"}
+        </button>
       </div>
     </div>
   );
