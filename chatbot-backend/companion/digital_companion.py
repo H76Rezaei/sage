@@ -49,8 +49,8 @@ class DigitalCompanion:
                  stm_limit=7,
                  index_name = "chatbot-memory",
                  embedding_model = 'intfloat/multilingual-e5-large',
-                 score_threshold = 0.8,
-                 max_db_results = 3,
+                 score_threshold = 0.3,
+                 max_db_results = 7,
                  embedding_dim = 1024,
                  user_id = "test_3_with_demo_script",
                  thread_id = "test_session"):
